@@ -1,0 +1,90 @@
+module Dotenv
+  module Merge
+    # Represents a single line in a dotenv file.
+    # Parses and categorizes lines as assignments, comments, blank lines, or invalid.
+    class EnvLine
+      # Prefix for exported environment variables
+      EXPORT_PREFIX: String
+
+      # Location struct for compatibility with AST nodes
+      class Location < Struct[Integer]
+        attr_accessor start_line: Integer
+        attr_accessor end_line: Integer
+
+        # Check if a line number falls within this location
+        def cover?: (Integer line_number) -> bool
+      end
+
+      # The original raw line content
+      attr_reader raw: String
+
+      # The 1-indexed line number in the source file
+      attr_reader line_number: Integer
+
+      # The line type (:assignment, :comment, :blank, :invalid)
+      attr_reader type: Symbol?
+
+      # The environment variable key (for assignments)
+      attr_reader key: String?
+
+      # The environment variable value (for assignments)
+      attr_reader value: String?
+
+      # Whether the line has an export prefix
+      attr_reader export: bool
+
+      # Initialize a new EnvLine by parsing the raw content
+      def initialize: (String raw, Integer line_number) -> void
+
+      # Generate a unique signature for this line (used for merge matching)
+      def signature: () -> Array[Symbol | String]?
+
+      # Get a location object for this line
+      def location: () -> Location
+
+      # Check if this line is an environment variable assignment
+      def assignment?: () -> bool
+
+      # Check if this line is a comment
+      def comment?: () -> bool
+
+      # Check if this line is blank (empty or whitespace only)
+      def blank?: () -> bool
+
+      # Check if this line is invalid (unparseable)
+      def invalid?: () -> bool
+
+      # Check if this line has the export prefix
+      def export?: () -> bool
+
+      # Get the raw comment text (for comment lines only)
+      def comment: () -> String?
+
+      # Convert to string representation (returns raw content)
+      def to_s: () -> String
+
+      # Inspect for debugging
+      def inspect: () -> String
+
+      private
+
+      # Parse the raw line content and set type, key, value, and export
+      def parse!: () -> void
+
+      # Parse a potential assignment line
+      def parse_assignment!: (String stripped) -> void
+
+      # Validate an environment variable key
+      def valid_key?: (String? key) -> bool
+
+      # Remove quotes from a value and process escape sequences
+      def unquote: (String value) -> String
+
+      # Process escape sequences in double-quoted strings
+      def process_escape_sequences: (String value) -> String
+
+      # Strip inline comments from unquoted values
+      def strip_inline_comment: (String value) -> String
+    end
+  end
+end

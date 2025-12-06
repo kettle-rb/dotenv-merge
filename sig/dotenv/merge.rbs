@@ -1,6 +1,212 @@
+# Type signatures for dotenv-merge gem
+# Smart merge for .env files using line-based analysis
+
 module Dotenv
   module Merge
     VERSION: String
-    # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+    # Base error class for dotenv-merge
+    class Error < StandardError
+    end
+
+    # Raised when the template file cannot be parsed
+    class TemplateParseError < Error
+      attr_reader errors: Array[String]
+      attr_reader content: String?
+
+      def initialize: (Array[String] errors, ?content: String?) -> void
+    end
+
+    # Raised when the destination file cannot be parsed
+    class DestinationParseError < Error
+      attr_reader errors: Array[String]
+      attr_reader content: String?
+
+      def initialize: (Array[String] errors, ?content: String?) -> void
+    end
+
+    # Debug logging utility for Dotenv::Merge
+    module DebugLogger
+      extend Ast::Merge::DebugLogger
+
+      def self.env_var_name: () -> String
+      def self.env_var_name=: (String name) -> String
+      def self.log_prefix: () -> String
+      def self.log_prefix=: (String prefix) -> String
+      def self.enabled?: () -> bool
+      def self.debug: (String message, ?Hash[Symbol, untyped] context) -> void
+      def self.info: (String message) -> void
+      def self.warning: (String message) -> void
+      def self.time: [T] (String operation) { () -> T } -> T
+      def self.extract_node_info: (untyped node) -> Hash[Symbol, untyped]
+    end
+
+    # Represents a single line in a dotenv file
+    class EnvLine
+      attr_reader line_number: Integer
+      attr_reader raw: String
+      attr_reader key: String?
+      attr_reader value: String?
+      attr_reader comment: String?
+
+      def initialize: (
+        Integer line_number,
+        String raw,
+        ?key: String?,
+        ?value: String?,
+        ?comment: String?
+      ) -> void
+
+      def assignment?: () -> bool
+      def comment?: () -> bool
+      def blank?: () -> bool
+      def signature: () -> Array[Symbol | String]
+      def start_line: () -> Integer
+      def end_line: () -> Integer
+      def location: () -> Ast::Merge::FreezeNode::Location
+      def freeze_node?: () -> bool
+      def slice: () -> String
+      def to_s: () -> String
+    end
+
+    # Represents a freeze block in a dotenv file
+    class FreezeNode < Ast::Merge::FreezeNode
+      InvalidStructureError: singleton(Ast::Merge::FreezeNode::InvalidStructureError)
+      Location: singleton(Ast::Merge::FreezeNode::Location)
+
+      attr_reader analysis: FileAnalysis
+      attr_reader lines: Array[EnvLine]
+      attr_reader reason: String?
+
+      def initialize: (
+        start_line: Integer,
+        end_line: Integer,
+        analysis: FileAnalysis,
+        ?lines: Array[EnvLine]?,
+        ?reason: String?,
+        ?pattern_type: Symbol
+      ) -> void
+
+      def content: () -> String
+      def signature: () -> Array[Symbol | String]
+      def env_lines: () -> Array[EnvLine]
+      def assignment?: () -> bool
+      def comment?: () -> bool
+      def slice: () -> String
+      def inspect: () -> String
+    end
+
+    # File analysis for dotenv files
+    class FileAnalysis
+      include Ast::Merge::FileAnalysisBase
+
+      DEFAULT_FREEZE_TOKEN: String
+
+      attr_reader source: String
+      attr_reader lines: Array[EnvLine]
+      attr_reader freeze_token: String
+      attr_reader signature_generator: (^(EnvLine) -> Array[Symbol | String]?)?
+      attr_reader statements: Array[EnvLine | FreezeNode]
+      attr_reader freeze_blocks: Array[FreezeNode]
+
+      def initialize: (
+        String source,
+        ?freeze_token: String,
+        ?signature_generator: (^(EnvLine) -> Array[Symbol | String]?)?
+      ) -> void
+
+      def valid?: () -> bool
+      def nodes: () -> Array[EnvLine | FreezeNode]
+      def assignment_lines: () -> Array[EnvLine]
+      def line_at: (Integer line_number) -> String?
+      def normalized_line: (Integer line_num) -> String?
+      def in_freeze_block?: (Integer line_num) -> bool
+      def freeze_block_at: (Integer line_num) -> FreezeNode?
+      def signature_at: (Integer index) -> Array[Symbol | String]?
+      def generate_signature: (EnvLine | FreezeNode node) -> Array[Symbol | String]?
+      def compute_node_signature: (untyped node) -> Array[Symbol | String]?
+
+      private
+
+      def parse_lines: () -> Array[EnvLine]
+      def extract_freeze_blocks: () -> Array[FreezeNode]
+      def integrate_lines_and_freeze_blocks: () -> Array[EnvLine | FreezeNode]
+    end
+
+    # Result of a merge operation
+    class MergeResult < Ast::Merge::MergeResult
+      DECISION_KEPT_TEMPLATE: Symbol
+      DECISION_KEPT_DEST: Symbol
+      DECISION_MERGED: Symbol
+      DECISION_ADDED: Symbol
+      DECISION_FREEZE_BLOCK: Symbol
+
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+      attr_reader lines: Array[String]
+      attr_reader provenance: Array[Hash[Symbol, untyped]]
+      attr_reader decisions: Array[Hash[Symbol, untyped]]
+
+      def initialize: (
+        ?template_analysis: FileAnalysis?,
+        ?dest_analysis: FileAnalysis?,
+        ?conflicts: Array[Hash[Symbol, untyped]],
+        ?frozen_blocks: Array[FreezeNode],
+        ?stats: Hash[Symbol, untyped]
+      ) -> void
+
+      def add_line: (String line, Symbol origin, ?Integer? source_line) -> void
+      def add_env_line: (EnvLine env_line, Symbol decision) -> void
+      def add_freeze_block: (FreezeNode freeze_node) -> void
+      def to_s: () -> String
+      def to_dotenv: () -> String
+      def content: () -> Array[String]
+      def content_string: () -> String
+      def empty?: () -> bool
+    end
+
+    # Smart merger for dotenv files
+    class SmartMerger
+      include Ast::Merge::MergerConfig
+
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+      attr_reader signature_match_preference: (Symbol | Hash[Symbol, Symbol])
+      attr_reader add_template_only_nodes: bool
+
+      def initialize: (
+        String template_content,
+        String dest_content,
+        ?signature_match_preference: (Symbol | Hash[Symbol, Symbol]),
+        ?add_template_only_nodes: bool,
+        ?freeze_token: String,
+        ?signature_generator: (^(EnvLine) -> Array[Symbol | String]?)?,
+        ?node_splitter: (Hash[Symbol, untyped])?
+      ) -> void
+
+      def merge: () -> MergeResult
+
+      private
+
+      def perform_merge: () -> MergeResult
+      def merge_lines: (MergeResult result) -> void
+    end
+
+    # Conflict resolver for dotenv merges
+    class ConflictResolver
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+      attr_reader signature_match_preference: (Symbol | Hash[Symbol, Symbol])
+      attr_reader add_template_only_nodes: bool
+
+      def initialize: (
+        FileAnalysis template_analysis,
+        FileAnalysis dest_analysis,
+        ?signature_match_preference: (Symbol | Hash[Symbol, Symbol]),
+        ?add_template_only_nodes: bool
+      ) -> void
+
+      def resolve: (untyped boundary, MergeResult result) -> void
+    end
   end
 end
