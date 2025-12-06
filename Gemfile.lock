@@ -1,0 +1,32 @@
+PATH
+  remote: ../ast-merge
+  specs:
+    ast-merge (1.0.0)
+      kettle-dev (~> 1.1.60)
+
+PATH
+  remote: .
+  specs:
+    dotenv-merge (0.1.0)
+      kettle-dev (~> 1.1.60)
+
+GEM
+  remote: https://gem.coop/
+  specs:
+    kettle-dev (1.1.60)
+
+PLATFORMS
+  ruby
+  x86_64-linux
+
+DEPENDENCIES
+  ast-merge!
+  dotenv-merge!
+
+CHECKSUMS
+  ast-merge (1.0.0)
+  dotenv-merge (0.1.0)
+  kettle-dev (1.1.60) sha256=e155e60912c171b4fab24cfce1dc6f00e87cb3e62803a235c8524516d1ba1850
+
+BUNDLED WITH
+  4.0.0
