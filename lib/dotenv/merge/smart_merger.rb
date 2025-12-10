@@ -15,7 +15,7 @@ module Dotenv
     #   merger = SmartMerger.new(
     #     template_content,
     #     dest_content,
-    #     signature_match_preference: :template,
+    #     preference: :template,
     #     add_template_only_nodes: true,
     #   )
     #   result = merger.merge
@@ -30,7 +30,7 @@ module Dotenv
       #
       # @param template_content [String] Content of the template dotenv file
       # @param dest_content [String] Content of the destination dotenv file
-      # @param signature_match_preference [Symbol] Which version to prefer on match
+      # @param preference [Symbol] Which version to prefer on match
       #   (:template or :destination, default: :destination)
       # @param add_template_only_nodes [Boolean] Whether to add template-only env vars
       #   (default: false)
@@ -40,12 +40,12 @@ module Dotenv
       def initialize(
         template_content,
         dest_content,
-        signature_match_preference: :destination,
+        preference: :destination,
         add_template_only_nodes: false,
         freeze_token: FileAnalysis::DEFAULT_FREEZE_TOKEN,
         signature_generator: nil
       )
-        @signature_match_preference = signature_match_preference
+        @preference = preference
         @add_template_only_nodes = add_template_only_nodes
 
         # Parse template
@@ -212,7 +212,7 @@ module Dotenv
         end
 
         # Apply preference
-        case @signature_match_preference
+        case @preference
         when :template
           @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_TEMPLATE)
         when :destination

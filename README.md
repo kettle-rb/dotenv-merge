@@ -66,7 +66,7 @@ Dotenv::Merge is a standalone Ruby module that intelligently merges two versions
 - **Standalone**: Minimal dependencies - just `ast-merge`
 - **Customizable**:
   - `signature_generator` - callable custom signature generators
-  - `signature_match_preference` - setting of `:template`, `:destination`, or a Hash for per-node-type preferences
+  - `preference` - setting of `:template`, `:destination`, or a Hash for per-node-type preferences
   - `node_splitter` - Hash mapping node types to callables for per-node-type merge customization (see [ast-merge](https://github.com/kettle-rb/ast-merge) docs)
   - `add_template_only_nodes` - setting to retain variables that do not exist in destination
   - `freeze_token` - customize freeze block markers (default: `"dotenv-merge"`)
@@ -106,7 +106,7 @@ merger = Dotenv::Merge::SmartMerger.new(
   # Which version to prefer when variables match
   # :destination (default) - keep destination values
   # :template - use template values
-  signature_match_preference: :destination,
+  preference: :destination,
 
   # Whether to add template-only variables to the result
   # false (default) - only include variables that exist in destination

@@ -84,7 +84,7 @@ RSpec.describe Dotenv::Merge::SmartMerger do
       let(:template) { "API_KEY=template_value\n" }
       let(:destination) { "API_KEY=dest_value\n" }
 
-      context "when signature_match_preference is :destination (default)" do
+      context "when preference is :destination (default)" do
         it "uses destination version" do
           merger = described_class.new(template, destination)
           result = merger.merge_result
@@ -93,9 +93,9 @@ RSpec.describe Dotenv::Merge::SmartMerger do
         end
       end
 
-      context "when signature_match_preference is :template" do
+      context "when preference is :template" do
         it "uses template version" do
-          merger = described_class.new(template, destination, signature_match_preference: :template)
+          merger = described_class.new(template, destination, preference: :template)
           result = merger.merge_result
           expect(result.to_s).to include("API_KEY=template_value")
           expect(result.to_s).not_to include("API_KEY=dest_value")
@@ -172,7 +172,7 @@ RSpec.describe Dotenv::Merge::SmartMerger do
       let(:destination) { "export API_KEY=dest\n" }
 
       it "matches exported variables" do
-        merger = described_class.new(template, destination, signature_match_preference: :template)
+        merger = described_class.new(template, destination, preference: :template)
         result = merger.merge_result
         expect(result.to_s).to include("export API_KEY=template")
       end
@@ -214,7 +214,7 @@ RSpec.describe Dotenv::Merge::SmartMerger do
         merger = described_class.new(
           template,
           destination,
-          signature_match_preference: :destination,
+          preference: :destination,
           add_template_only_nodes: true,
         )
         result = merger.merge_result
