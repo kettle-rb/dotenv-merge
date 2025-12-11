@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.name = "dotenv-merge"
   spec.version = gem_version
   spec.authors = ["Peter H. Boling"]
-  spec.email = ["peter.boling@gmail.com"]
+  spec.email = ["floss@galtzo.com"]
 
   spec.summary = "☯️ Intelligent .env file merging using structured parsing"
   spec.description = "☯️ Dotenv::Merge provides smart .env file merging that preserves comments, understands variable assignments, and supports freeze blocks for protecting sensitive configuration. Perfect for merging environment templates with local overrides."
