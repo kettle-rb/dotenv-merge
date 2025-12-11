@@ -5,6 +5,9 @@ module Dotenv
     # Represents a single line in a dotenv file.
     # Parses and categorizes lines as assignments, comments, blank lines, or invalid.
     #
+    # Inherits from Ast::Merge::AstNode for a normalized API across all ast-merge
+    # content nodes. This provides #slice, #location, #unwrap, and other standard methods.
+    #
     # Dotenv files follow a simple format where each line is one of:
     # - `KEY=value` - Environment variable assignment
     # - `export KEY=value` - Assignment with export prefix
@@ -31,21 +34,10 @@ module Dotenv
     # @example Quoted values with escape sequences
     #   line = EnvLine.new('MESSAGE="Hello\nWorld"', 4)
     #   line.value       # => "Hello\nWorld" (with actual newline)
-    class EnvLine
+    class EnvLine < Ast::Merge::AstNode
       # Prefix for exported environment variables
       # @return [String]
       EXPORT_PREFIX = "export "
-
-      # Location struct for compatibility with AST nodes.
-      # Provides line range information for a parsed line.
-      Location = Struct.new(:start_line, :end_line) do
-        # Check if a line number falls within this location
-        # @param line_number [Integer] The line number to check
-        # @return [Boolean] true if the line number is within the range
-        def cover?(line_number)
-          line_number >= start_line && line_number <= end_line
-        end
-      end
 
       # @return [String] The original raw line content
       attr_reader :raw
@@ -77,6 +69,15 @@ module Dotenv
         @value = nil
         @export = false
         parse!
+
+        location = Ast::Merge::AstNode::Location.new(
+          start_line: line_number,
+          end_line: line_number,
+          start_column: 0,
+          end_column: @raw.length
+        )
+
+        super(slice: @raw, location: location)
       end
 
       # Generate a unique signature for this line (used for merge matching)
@@ -86,13 +87,6 @@ module Dotenv
         return unless @type == :assignment
 
         [:env, @key]
-      end
-
-      # Get a location object for this line
-      #
-      # @return [Location] Location struct with start and end line numbers
-      def location
-        @location ||= Location.new(line_number, line_number)
       end
 
       # Check if this line is an environment variable assignment

@@ -93,6 +93,10 @@ module Dotenv
         end
       end
 
+      # Note: fallthrough_node? is inherited from FileAnalyzable.
+      # EnvLine inherits from AstNode and FreezeNode inherits from FreezeNodeBase,
+      # both of which are recognized by the base implementation.
+
       # Get environment variable by key
       # @param key [String] The environment variable key
       # @return [EnvLine, nil] The assignment line or nil
