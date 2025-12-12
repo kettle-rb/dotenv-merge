@@ -12,8 +12,5 @@
   ],
   "spec/dotenv/version_spec.rb:3249002697": [
     [3, 1, 37, "RSpec/SpecFilePathFormat: Spec path should end with `dotenv/merge/version*_spec.rb`.", 3431078673]
-  ],
-  "spec/integration/reproducible_merge_spec.rb:3601328105": [
-    [6, 16, 27, "RSpec/DescribeClass: The first argument to describe should be the class or module being tested.", 651159509]
   ]
 }
