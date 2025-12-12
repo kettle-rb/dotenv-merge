@@ -1,5 +1,5 @@
 {
-  "README.md:3987061578": [
+  "README.md:3910354434": [
     [425, 14, 11, "Lint/Syntax: unexpected token tLABEL\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2506233881],
     [425, 27, 9, "Lint/Syntax: unknown regexp options: lcalht\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 3210828456]
   ],
