@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Initial release
+
 ### Changed
 
 ### Deprecated
@@ -30,6 +32,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Security
 
-## [0.1.0] - 2025-12-05
-
-- Initial release
+[Unreleased]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/kettle-rb/dotenv-merge/compare/a34c8f20c877a45d03b9f0b83b973614e123a92b...v1.0.0
+[1.0.0t]: https://github.com/kettle-rb/dotenv-merge/tags/v1.0.0
