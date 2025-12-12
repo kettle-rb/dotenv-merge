@@ -74,7 +74,7 @@ module Dotenv
           start_line: line_number,
           end_line: line_number,
           start_column: 0,
-          end_column: @raw.length
+          end_column: @raw.length,
         )
 
         super(slice: @raw, location: location)
