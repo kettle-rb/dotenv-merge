@@ -6,7 +6,8 @@ module Dotenv
     # Parses and categorizes lines as assignments, comments, blank lines, or invalid.
     #
     # Inherits from Ast::Merge::AstNode for a normalized API across all ast-merge
-    # content nodes. This provides #slice, #location, #unwrap, and other standard methods.
+    # content nodes. This provides TreeHaver::Node protocol compatibility including
+    # #slice, #location, #unwrap, #type, #text, and other standard methods.
     #
     # Dotenv files follow a simple format where each line is one of:
     # - `KEY=value` - Environment variable assignment
@@ -46,7 +47,7 @@ module Dotenv
       attr_reader :line_number
 
       # @return [Symbol, nil] The line type (:assignment, :comment, :blank, :invalid)
-      attr_reader :type
+      attr_reader :line_type
 
       # @return [String, nil] The environment variable key (for assignments)
       attr_reader :key
@@ -64,7 +65,7 @@ module Dotenv
       def initialize(raw, line_number)
         @raw = raw
         @line_number = line_number
-        @type = nil
+        @line_type = nil
         @key = nil
         @value = nil
         @export = false
@@ -80,11 +81,17 @@ module Dotenv
         super(slice: @raw, location: location)
       end
 
+      # TreeHaver::Node protocol: type
+      # @return [String] "env_line"
+      def type
+        "env_line"
+      end
+
       # Generate a unique signature for this line (used for merge matching)
       #
       # @return [Array<Symbol, String>, nil] Signature array [:env, key] for assignments, nil otherwise
       def signature
-        return unless @type == :assignment
+        return unless @line_type == :assignment
 
         [:env, @key]
       end
@@ -93,28 +100,28 @@ module Dotenv
       #
       # @return [Boolean] true if the line is a valid KEY=value assignment
       def assignment?
-        @type == :assignment
+        @line_type == :assignment
       end
 
       # Check if this line is a comment
       #
       # @return [Boolean] true if the line starts with #
       def comment?
-        @type == :comment
+        @line_type == :comment
       end
 
       # Check if this line is blank (empty or whitespace only)
       #
       # @return [Boolean] true if the line is blank
       def blank?
-        @type == :blank
+        @line_type == :blank
       end
 
       # Check if this line is invalid (unparseable)
       #
       # @return [Boolean] true if the line could not be parsed
       def invalid?
-        @type == :invalid
+        @line_type == :invalid
       end
 
       # Check if this line has the export prefix
@@ -144,20 +151,20 @@ module Dotenv
       #
       # @return [String] A debug representation of this EnvLine
       def inspect
-        "#<#{self.class.name} line=#{@line_number} type=#{@type} key=#{@key.inspect}>"
+        "#<#{self.class.name} line=#{@line_number} line_type=#{@line_type} key=#{@key.inspect}>"
       end
 
       private
 
-      # Parse the raw line content and set type, key, value, and export
+      # Parse the raw line content and set line_type, key, value, and export
       #
       # @return [void]
       def parse!
         stripped = @raw.strip
         if stripped.empty?
-          @type = :blank
+          @line_type = :blank
         elsif stripped.start_with?("#")
-          @type = :comment
+          @line_type = :comment
         else
           parse_assignment!(stripped)
         end
@@ -178,14 +185,14 @@ module Dotenv
           key_part, value_part = line.split("=", 2)
           key_part = key_part.strip
           if valid_key?(key_part)
-            @type = :assignment
+            @line_type = :assignment
             @key = key_part
             @value = unquote(value_part || "")
           else
-            @type = :invalid
+            @line_type = :invalid
           end
         else
-          @type = :invalid
+          @line_type = :invalid
         end
       end
 

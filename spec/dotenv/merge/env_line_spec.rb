@@ -6,7 +6,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       let(:line) { described_class.new("API_KEY=secret123", 1) }
 
       it "parses as assignment" do
-        expect(line.type).to eq(:assignment)
+        expect(line.line_type).to eq(:assignment)
         expect(line.assignment?).to be true
       end
 
@@ -95,7 +95,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       let(:line) { described_class.new("# This is a comment", 3) }
 
       it "parses as comment" do
-        expect(line.type).to eq(:comment)
+        expect(line.line_type).to eq(:comment)
         expect(line.comment?).to be true
       end
 
@@ -113,7 +113,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       let(:line) { described_class.new("", 4) }
 
       it "parses as blank" do
-        expect(line.type).to eq(:blank)
+        expect(line.line_type).to eq(:blank)
         expect(line.blank?).to be true
       end
     end
@@ -130,7 +130,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       let(:line) { described_class.new("not a valid line", 6) }
 
       it "parses as invalid" do
-        expect(line.type).to eq(:invalid)
+        expect(line.line_type).to eq(:invalid)
         expect(line.invalid?).to be true
       end
     end
@@ -155,7 +155,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       let(:line) { described_class.new("2INVALID=value", 1) }
 
       it "parses as invalid" do
-        expect(line.type).to eq(:invalid)
+        expect(line.line_type).to eq(:invalid)
       end
     end
 
@@ -163,7 +163,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       let(:line) { described_class.new("=value", 1) }
 
       it "parses as invalid" do
-        expect(line.type).to eq(:invalid)
+        expect(line.line_type).to eq(:invalid)
       end
     end
   end
@@ -184,6 +184,25 @@ RSpec.describe Dotenv::Merge::EnvLine do
     it "returns the raw content" do
       line = described_class.new("KEY=value", 1)
       expect(line.to_s).to eq("KEY=value")
+    end
+  end
+
+  describe "#type" do
+    it "returns 'env_line' for TreeHaver::Node protocol" do
+      line = described_class.new("API_KEY=secret", 1)
+      expect(line.type).to eq("env_line")
+    end
+
+    it "returns 'env_line' for all line types" do
+      assignment = described_class.new("KEY=value", 1)
+      comment = described_class.new("# comment", 2)
+      blank = described_class.new("", 3)
+      invalid = described_class.new("not valid", 4)
+
+      expect(assignment.type).to eq("env_line")
+      expect(comment.type).to eq("env_line")
+      expect(blank.type).to eq("env_line")
+      expect(invalid.type).to eq("env_line")
     end
   end
 
@@ -229,7 +248,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       line = described_class.new("KEY=value", 1)
       expect(line.inspect).to include("EnvLine")
       expect(line.inspect).to include("line=1")
-      expect(line.inspect).to include("type=assignment")
+      expect(line.inspect).to include("line_type=assignment")
       expect(line.inspect).to include('key="KEY"')
     end
 
@@ -261,7 +280,7 @@ RSpec.describe Dotenv::Merge::EnvLine do
       # Note: spaces around = may make this invalid depending on implementation
       line = described_class.new("export KEY = value", 1)
       # Check that it handles this case somehow (may be invalid or parsed)
-      expect(line.type).to be_a(Symbol)
+      expect(line.line_type).to be_a(Symbol)
     end
   end
 end

@@ -20,7 +20,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `EnvLine#type` method returning `"env_line"` for TreeHaver::Node protocol compatibility
+
 ### Changed
+
+- Renamed `EnvLine#type` attribute to `EnvLine#line_type` to avoid conflict with TreeHaver::Node protocol
 
 ### Deprecated
 
