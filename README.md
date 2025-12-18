@@ -97,139 +97,34 @@ result = merger.merge
 File.write("merged.env", result.to_s)
 ```
 
-### Part of a gem family
-
-| Gem | File Type | Parser |
-|-----|-----------|--------|
-| [ast-merge](https://github.com/kettle-rb/ast-merge) | Text | internal |
-| [prism-merge](https://github.com/kettle-rb/prism-merge) | Ruby | Prism |
-| [psych-merge](https://github.com/kettle-rb/psych-merge) | YAML | Psych |
-| [json-merge](https://github.com/kettle-rb/json-merge) | JSON | tree-sitter-json |
-| [jsonc-merge](https://github.com/kettle-rb/jsonc-merge) | JSONC | ⚠️ [tree-sitter-jsonc](https://gitlab.com/WhyNotHugo/tree-sitter-jsonc) (PoC) |
-| [bash-merge](https://github.com/kettle-rb/bash-merge) | Shell | tree-sitter-bash |
-| [rbs-merge](https://github.com/kettle-rb/rbs-merge) | RBS Types | RBS |
-| **dotenv-merge** | Dotenv | internal |
-| [toml-merge](https://github.com/kettle-rb/toml-merge) | TOML | tree-sitter-toml |
-| [markdown-merge](https://github.com/kettle-rb/markdown-merge) | Markdown | _base classes_ |
-| [markly-merge](https://github.com/kettle-rb/markly-merge) | Markdown | Markly (cmark-gfm) |
-| [commonmarker-merge](https://github.com/kettle-rb/commonmarker-merge) | Markdown | Commonmarker (Comrak) |
-
-**Example implementations** for the gem templating use case:
-
-| Gem | Purpose |
-|-----|---------|
-| [kettle-dev](https://github.com/kettle-rb/kettle-dev) | Gem templating tool |
-| [kettle-jem](https://github.com/kettle-rb/kettle-jem) | Gem template library |
-
-### Configuration
-
-```ruby
-merger = Dotenv::Merge::SmartMerger.new(
-  template_content,
-  dest_content,
-  # Which version to prefer when variables match
-  # :destination (default) - keep destination values
-  # :template - use template values
-  preference: :destination,
-
-  # Whether to add template-only variables to the result
-  # false (default) - only include variables that exist in destination
-  # true - include all template variables
-  add_template_only_nodes: false,
-
-  # Token for freeze block markers
-  # Default: "dotenv-merge"
-  # Looks for: # dotenv-merge:freeze / # dotenv-merge:unfreeze
-  freeze_token: "dotenv-merge",
-
-  # Custom signature generator (optional)
-  # Receives an EnvLine, returns a signature array or nil
-  signature_generator: ->(line) { [:env, line.key] if line.assignment? },
-)
-```
-
-### Basic Usage
-
-#### Simple Merge
-
-```ruby
-require "dotenv/merge"
-
-# Template defines the structure
-template = <<~ENV
-  # Database configuration
-  DATABASE_URL=postgres://localhost/myapp_dev
-  DATABASE_POOL=5
-
-  # API keys
-  API_KEY=your_api_key_here
-  API_SECRET=your_secret_here
-ENV
-
-# Destination has customizations
-destination = <<~ENV
-  # Database configuration
-  DATABASE_URL=postgres://production.example.com/myapp
-  DATABASE_POOL=25
-
-  # Custom setting not in template
-  CUSTOM_SETTING=my_value
-ENV
-
-merger = Dotenv::Merge::SmartMerger.new(template, destination)
-result = merger.merge
-puts result
-```
-
-#### Using Freeze Blocks
-
-Freeze blocks protect sections from being overwritten during merge:
-
-```env
-# Database configuration
-DATABASE_URL=postgres://localhost/myapp_dev
-
-# dotenv-merge:freeze Custom API credentials
-API_KEY=my_secret_production_key
-API_SECRET=super_secret_value
-# dotenv-merge:unfreeze
-
-# Other settings
-DEBUG=false
-```
-
-Content between `# dotenv-merge:freeze` and `# dotenv-merge:unfreeze` markers is preserved from the destination file, regardless of what the template contains.
-
-#### Adding Template-Only Variables
-
-```ruby
-merger = Dotenv::Merge::SmartMerger.new(
-  template,
-  destination,
-  add_template_only_nodes: true,
-)
-result = merger.merge
-# Result includes variables from template that don't exist in destination
-```
-
 ### The `*-merge` Gem Family
 
 This gem is part of a family of gems that provide intelligent merging for various file formats:
 
-| Gem | Format | Parser | Description |
-|-----|--------|--------|-------------|
-| [ast-merge][ast-merge] | Text | internal | Shared infrastructure for all `*-merge` gems |
-| [prism-merge][prism-merge] | Ruby | [Prism][prism] | Smart merge for Ruby source files |
-| [psych-merge][psych-merge] | YAML | [Psych][psych] | Smart merge for YAML files |
-| [json-merge][json-merge] | JSON | [tree-sitter-json][ts-json] | Smart merge for JSON files |
-| [jsonc-merge][jsonc-merge] | JSONC | [tree-sitter-jsonc][ts-jsonc] | ⚠️ Proof of concept; Smart merge for JSON with Comments |
-| [bash-merge][bash-merge] | Bash | [tree-sitter-bash][ts-bash] | Smart merge for Bash scripts |
+| Gem | Format | Parser Backend(s) | Description |
+|-----|--------|-------------------|-------------|
+| [tree_haver][tree_haver] | Multi | MRI C, Rust, FFI, Java, Prism, Psych, Commonmarker, Markly, Citrus | **Foundation**: Cross-Ruby adapter for parsing libraries (like Faraday for HTTP) |
+| [ast-merge][ast-merge] | Text | internal | **Infrastructure**: Shared base classes and merge logic for all `*-merge` gems |
+| [prism-merge][prism-merge] | Ruby | [Prism][prism] (via [tree_haver][tree_haver]) | Smart merge for Ruby source files |
+| [psych-merge][psych-merge] | YAML | [Psych][psych] (via [tree_haver][tree_haver]) | Smart merge for YAML files |
+| [json-merge][json-merge] | JSON | [tree-sitter-json][ts-json] (via [tree_haver][tree_haver]) | Smart merge for JSON files |
+| [jsonc-merge][jsonc-merge] | JSONC | [tree-sitter-jsonc][ts-jsonc] (via [tree_haver][tree_haver]) | ⚠️ Proof of concept; Smart merge for JSON with Comments |
+| [bash-merge][bash-merge] | Bash | [tree-sitter-bash][ts-bash] (via [tree_haver][tree_haver]) | Smart merge for Bash scripts |
 | [rbs-merge][rbs-merge] | RBS | [RBS][rbs] | Smart merge for Ruby type signatures |
 | [dotenv-merge][dotenv-merge] | Dotenv | internal ([dotenv][dotenv]) | Smart merge for `.env` files |
-| [toml-merge][toml-merge] | TOML | [tree-sitter-toml][ts-toml] | Smart merge for TOML files |
-| [markly-merge][markly-merge] | Markdown | [Markly][markly] | Smart merge for Markdown (CommonMark via libcmark-gfm) |
-| [commonmarker-merge][commonmarker-merge] | Markdown | [Commonmarker][commonmarker] | Smart merge for Markdown (CommonMark via comrak) |
+| [toml-merge][toml-merge] | TOML | [tree-sitter-toml][ts-toml] (via [tree_haver][tree_haver]) | Smart merge for TOML files |
+| [markdown-merge][markdown-merge] | Markdown | [Commonmarker][commonmarker] / [Markly][markly] (via [tree_haver][tree_haver]) | **Foundation**: Shared base for Markdown mergers with inner code block merging |
+| [markly-merge][markly-merge] | Markdown | [Markly][markly] (via [tree_haver][tree_haver]) | Smart merge for Markdown (CommonMark via cmark-gfm C) |
+| [commonmarker-merge][commonmarker-merge] | Markdown | [Commonmarker][commonmarker] (via [tree_haver][tree_haver]) | Smart merge for Markdown (CommonMark via comrak Rust) |
 
+**Example implementations** for the gem templating use case:
+
+| Gem | Purpose | Description |
+|-----|---------|-------------|
+| [kettle-dev][kettle-dev] | Gem Development | Gem templating tool using `*-merge` gems |
+| [kettle-jem][kettle-jem] | Gem Templating | Gem template library with smart merge support |
+
+[tree_haver]: https://github.com/kettle-rb/tree_haver
 [ast-merge]: https://github.com/kettle-rb/ast-merge
 [prism-merge]: https://github.com/kettle-rb/prism-merge
 [psych-merge]: https://github.com/kettle-rb/psych-merge
@@ -239,8 +134,11 @@ This gem is part of a family of gems that provide intelligent merging for variou
 [rbs-merge]: https://github.com/kettle-rb/rbs-merge
 [dotenv-merge]: https://github.com/kettle-rb/dotenv-merge
 [toml-merge]: https://github.com/kettle-rb/toml-merge
+[markdown-merge]: https://github.com/kettle-rb/markdown-merge
 [markly-merge]: https://github.com/kettle-rb/markly-merge
 [commonmarker-merge]: https://github.com/kettle-rb/commonmarker-merge
+[kettle-dev]: https://github.com/kettle-rb/kettle-dev
+[kettle-jem]: https://github.com/kettle-rb/kettle-jem
 [prism]: https://github.com/ruby/prism
 [psych]: https://github.com/ruby/psych
 [ts-json]: https://github.com/tree-sitter/tree-sitter-json
@@ -249,7 +147,7 @@ This gem is part of a family of gems that provide intelligent merging for variou
 [ts-toml]: https://github.com/tree-sitter-grammars/tree-sitter-toml
 [rbs]: https://github.com/ruby/rbs
 [dotenv]: https://github.com/bkeepers/dotenv
-[markly]: https://github.com/kivikakk/markly
+[markly]: https://github.com/ioquatix/markly
 [commonmarker]: https://github.com/gjtorikian/commonmarker
 
 ## 💡 Info you can shake a stick at
