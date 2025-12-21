@@ -33,10 +33,12 @@ module Dotenv
       # @param source [String] Dotenv source code to analyze
       # @param freeze_token [String] Token for freeze block markers (default: "dotenv-merge")
       # @param signature_generator [Proc, nil] Custom signature generator
-      def initialize(source, freeze_token: DEFAULT_FREEZE_TOKEN, signature_generator: nil)
+      # @param options [Hash] Additional options (forward compatibility - ignored by FileAnalysis)
+      def initialize(source, freeze_token: DEFAULT_FREEZE_TOKEN, signature_generator: nil, **options)
         @source = source
         @freeze_token = freeze_token
         @signature_generator = signature_generator
+        # **options captures any additional parameters (e.g., node_typing) for forward compatibility
 
         # Parse all lines
         @lines = parse_lines(source)
