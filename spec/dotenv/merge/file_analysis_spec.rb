@@ -253,4 +253,35 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
       end
     end
   end
+
+  describe "#compute_node_signature" do
+    let(:source) { "KEY=value\n" }
+    let(:analysis) { described_class.new(source) }
+
+    it "returns nil for unknown node types" do
+      unknown_node = Object.new
+      result = analysis.send(:compute_node_signature, unknown_node)
+      expect(result).to be_nil
+    end
+
+    it "returns signature for EnvLine" do
+      env_line = analysis.statements.first
+      result = analysis.send(:compute_node_signature, env_line)
+      expect(result).to be_an(Array)
+    end
+
+    it "returns signature for FreezeNode" do
+      freeze_source = <<~DOTENV
+        # dotenv-merge:freeze
+        KEY=value
+        # dotenv-merge:unfreeze
+      DOTENV
+      freeze_analysis = described_class.new(freeze_source)
+      freeze_node = freeze_analysis.freeze_blocks.first
+
+      result = freeze_analysis.send(:compute_node_signature, freeze_node)
+      expect(result).to be_an(Array)
+      expect(result.first).to eq(:FreezeNode)
+    end
+  end
 end

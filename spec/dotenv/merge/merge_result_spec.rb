@@ -171,4 +171,34 @@ RSpec.describe Dotenv::Merge::MergeResult do
       expect(described_class::DECISION_ADDED).to eq(:added)
     end
   end
+
+  describe "#extract_lines (private)" do
+    it "returns empty array for unknown statement types" do
+      unknown_stmt = Object.new
+      lines = result.send(:extract_lines, unknown_stmt)
+      expect(lines).to eq([])
+    end
+
+    it "extracts raw from EnvLine" do
+      env_line = template_analysis.statements.first
+      lines = result.send(:extract_lines, env_line)
+      expect(lines).to eq(["API_KEY=template_key"])
+    end
+
+    it "extracts multiple lines from FreezeNode" do
+      dest_with_freeze = <<~DOTENV
+        # dotenv-merge:freeze
+        KEY1=val1
+        KEY2=val2
+        # dotenv-merge:unfreeze
+      DOTENV
+      analysis = Dotenv::Merge::FileAnalysis.new(dest_with_freeze)
+      freeze_node = analysis.freeze_blocks.first
+
+      lines = result.send(:extract_lines, freeze_node)
+      expect(lines.size).to eq(4)
+      expect(lines).to include("# dotenv-merge:freeze")
+      expect(lines).to include("KEY1=val1")
+    end
+  end
 end

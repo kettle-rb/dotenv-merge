@@ -35,8 +35,9 @@ module Dotenv
       # Initialize a new merge result
       # @param template_analysis [FileAnalysis] Analysis of the template file
       # @param dest_analysis [FileAnalysis] Analysis of the destination file
-      def initialize(template_analysis, dest_analysis)
-        super(template_analysis: template_analysis, dest_analysis: dest_analysis)
+      # @param options [Hash] Additional options for forward compatibility
+      def initialize(template_analysis, dest_analysis, **options)
+        super(template_analysis: template_analysis, dest_analysis: dest_analysis, **options)
       end
 
       # Add content from the template at the given statement index
