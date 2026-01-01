@@ -265,7 +265,7 @@ module Dotenv
         if @preference.is_a?(Hash)
           # Apply node_typing if configured
           typed_template = apply_node_typing(template_stmt)
-          typed_dest = apply_node_typing(dest_stmt)
+          apply_node_typing(dest_stmt)
 
           # Check template merge_type first
           if Ast::Merge::NodeTyping.typed_node?(typed_template)

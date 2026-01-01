@@ -178,7 +178,7 @@ RSpec.describe Dotenv::Merge::SmartMerger do
       end
     end
 
-    context "complex merge scenario" do
+    context "with complex merge" do
       let(:template) do
         <<~DOTENV
           # Application config
