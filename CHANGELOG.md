@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.1] - 2026-01-01
+
+- TAG: [v1.0.1][1.0.1t]
+- COVERAGE: 97.72% -- 343/351 lines in 8 files
+- BRANCH COVERAGE: 83.61% -- 102/122 branches in 8 files
+- 96.83% documented
+
+### Added
+
 - `node_typing` parameter for per-node-type merge preferences
   - Enables `preference: { default: :destination, special_type: :template }` pattern
   - Works with custom merge_types assigned via node_typing lambdas
@@ -39,14 +58,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - Gains automatic support for new SmartMergerBase features
 - Renamed `EnvLine#type` attribute to `EnvLine#line_type` to avoid conflict with TreeHaver::Node protocol
 
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
-
 ## [1.0.0] - 2025-12-12
 
 - TAG: [v1.0.0][1.0.0t]
@@ -58,6 +69,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Initial release
 
-[Unreleased]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.0...v1.0.1
+[1.0.1t]: https://github.com/kettle-rb/dotenv-merge/releases/tag/v1.0.1
 [1.0.0]: https://github.com/kettle-rb/dotenv-merge/compare/a34c8f20c877a45d03b9f0b83b973614e123a92b...v1.0.0
 [1.0.0t]: https://github.com/kettle-rb/dotenv-merge/tags/v1.0.0
