@@ -72,7 +72,45 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="added">Added</h3>
 
+<ul>
+  <li>
+<code>node_typing</code> parameter for per-node-type merge preferences
+    <ul>
+      <li>Enables <code>preference: { default: :destination, special_type: :template }</code> pattern</li>
+      <li>Works with custom merge_types assigned via node_typing lambdas</li>
+    </ul>
+  </li>
+  <li>
+<code>match_refiner</code> parameter for fuzzy matching support</li>
+  <li>
+<code>regions</code> and <code>region_placeholder</code> parameters for nested content merging</li>
+  <li>
+<code>EnvLine#type</code> method returning <code>"env_line"</code> for TreeHaver::Node protocol compatibility</li>
+</ul>
+
 <h3 id="changed">Changed</h3>
+
+<ul>
+  <li>
+<strong>SmartMerger</strong>: Added <code>**options</code> for forward compatibility
+    <ul>
+      <li>Accepts additional options that may be added to base class in future</li>
+      <li>Passes all options through to <code>SmartMergerBase</code>
+</li>
+    </ul>
+  </li>
+  <li>
+<strong>MergeResult</strong>: Added <code>**options</code> for forward compatibility</li>
+  <li>
+<strong>BREAKING</strong>: <code>SmartMerger</code> now inherits from <code>Ast::Merge::SmartMergerBase</code>
+    <ul>
+      <li>Provides standardized options API consistent with all other <code>*-merge</code> gems</li>
+      <li>All keyword arguments are now explicit (no more positional-only arguments)</li>
+      <li>Gains automatic support for new SmartMergerBase features</li>
+    </ul>
+  </li>
+  <li>Renamed <code>EnvLine#type</code> attribute to <code>EnvLine#line_type</code> to avoid conflict with TreeHaver::Node protocol</li>
+</ul>
 
 <h3 id="deprecated">Deprecated</h3>
 
@@ -102,9 +140,9 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Fri Dec 12 15:15:31 2025 by
+  Generated on Thu Jan  1 15:21:08 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-3.4.7).
+  0.9.38 (ruby-4.0.0).
 </div>
 
     </div>

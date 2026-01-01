@@ -213,207 +213,33 @@ result = merger.merge
 File.write(&quot;merged.env&quot;, result.to_s)
 </code></pre>
 
-<h3 id="part-of-a-gem-family">Part of a gem family</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th>Gem</th>
-      <th>File Type</th>
-      <th>Parser</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/ast-merge">ast-merge</a></td>
-      <td>Text</td>
-      <td>internal</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/prism-merge">prism-merge</a></td>
-      <td>Ruby</td>
-      <td>Prism</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/psych-merge">psych-merge</a></td>
-      <td>YAML</td>
-      <td>Psych</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/json-merge">json-merge</a></td>
-      <td>JSON</td>
-      <td>tree-sitter-json</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/jsonc-merge">jsonc-merge</a></td>
-      <td>JSONC</td>
-      <td>⚠️ <a href="https://gitlab.com/WhyNotHugo/tree-sitter-jsonc">tree-sitter-jsonc</a> (PoC)</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/bash-merge">bash-merge</a></td>
-      <td>Shell</td>
-      <td>tree-sitter-bash</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/rbs-merge">rbs-merge</a></td>
-      <td>RBS Types</td>
-      <td>RBS</td>
-    </tr>
-    <tr>
-      <td><strong>dotenv-merge</strong></td>
-      <td>Dotenv</td>
-      <td>internal</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/toml-merge">toml-merge</a></td>
-      <td>TOML</td>
-      <td>tree-sitter-toml</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/markdown-merge">markdown-merge</a></td>
-      <td>Markdown</td>
-      <td><em>base classes</em></td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/markly-merge">markly-merge</a></td>
-      <td>Markdown</td>
-      <td>Markly (cmark-gfm)</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/commonmarker-merge">commonmarker-merge</a></td>
-      <td>Markdown</td>
-      <td>Commonmarker (Comrak)</td>
-    </tr>
-  </tbody>
-</table>
-
-<p><strong>Example implementations</strong> for the gem templating use case:</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Gem</th>
-      <th>Purpose</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/kettle-dev">kettle-dev</a></td>
-      <td>Gem templating tool</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/kettle-rb/kettle-jem">kettle-jem</a></td>
-      <td>Gem template library</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3 id="configuration">Configuration</h3>
-
-<pre class="code language-ruby"><code class="language-ruby">merger = Dotenv::Merge::SmartMerger.new(
-  template_content,
-  dest_content,
-  # Which version to prefer when variables match
-  # :destination (default) - keep destination values
-  # :template - use template values
-  preference: :destination,
-
-  # Whether to add template-only variables to the result
-  # false (default) - only include variables that exist in destination
-  # true - include all template variables
-  add_template_only_nodes: false,
-
-  # Token for freeze block markers
-  # Default: &quot;dotenv-merge&quot;
-  # Looks for: # dotenv-merge:freeze / # dotenv-merge:unfreeze
-  freeze_token: &quot;dotenv-merge&quot;,
-
-  # Custom signature generator (optional)
-  # Receives an EnvLine, returns a signature array or nil
-  signature_generator: -&gt;(line) { [:env, line.key] if line.assignment? },
-)
-</code></pre>
-
-<h3 id="basic-usage">Basic Usage</h3>
-
-<h4 id="simple-merge">Simple Merge</h4>
-
-<pre class="code language-ruby"><code class="language-ruby">require &quot;dotenv/merge&quot;
-
-# Template defines the structure
-template = &lt;&lt;~ENV
-  # Database configuration
-  DATABASE_URL=postgres://localhost/myapp_dev
-  DATABASE_POOL=5
-
-  # API keys
-  API_KEY=your_api_key_here
-  API_SECRET=your_secret_here
-ENV
-
-# Destination has customizations
-destination = &lt;&lt;~ENV
-  # Database configuration
-  DATABASE_URL=postgres://production.example.com/myapp
-  DATABASE_POOL=25
-
-  # Custom setting not in template
-  CUSTOM_SETTING=my_value
-ENV
-
-merger = Dotenv::Merge::SmartMerger.new(template, destination)
-result = merger.merge
-puts result
-</code></pre>
-
-<h4 id="using-freeze-blocks">Using Freeze Blocks</h4>
-
-<p>Freeze blocks protect sections from being overwritten during merge:</p>
-
-<pre class="code language-env"><code class="language-env"># Database configuration
-DATABASE_URL=postgres://localhost/myapp_dev
-
-# dotenv-merge:freeze Custom API credentials
-API_KEY=my_secret_production_key
-API_SECRET=super_secret_value
-# dotenv-merge:unfreeze
-
-# Other settings
-DEBUG=false
-</code></pre>
-
-<p>Content between <code># dotenv-merge:freeze</code> and <code># dotenv-merge:unfreeze</code> markers is preserved from the destination file, regardless of what the template contains.</p>
-
-<h4 id="adding-template-only-variables">Adding Template-Only Variables</h4>
-
-<pre class="code language-ruby"><code class="language-ruby">merger = Dotenv::Merge::SmartMerger.new(
-  template,
-  destination,
-  add_template_only_nodes: true,
-)
-result = merger.merge
-# Result includes variables from template that don&#39;t exist in destination
-</code></pre>
-
 <h3 id="the--merge-gem-family">The <code>*-merge</code> Gem Family</h3>
 
-<p>This gem is part of a family of gems that provide intelligent merging for various file formats:</p>
+<p>The <code>*-merge</code> gem family provides intelligent, AST-based merging for various file formats. At the foundation is <a href="https://github.com/kettle-rb/tree_haver">tree_haver</a>, which provides a unified cross-Ruby parsing API that works seamlessly across MRI, JRuby, and TruffleRuby.</p>
 
 <table>
   <thead>
     <tr>
       <th>Gem</th>
       <th>Format</th>
-      <th>Parser</th>
+      <th>Parser Backend(s)</th>
       <th>Description</th>
     </tr>
   </thead>
   <tbody>
     <tr>
+      <td><a href="https://github.com/kettle-rb/tree_haver">tree_haver</a></td>
+      <td>Multi</td>
+      <td>MRI C, Rust, FFI, Java, Prism, Psych, Commonmarker, Markly, Citrus</td>
+      <td>
+<strong>Foundation</strong>: Cross-Ruby adapter for parsing libraries (like Faraday for HTTP)</td>
+    </tr>
+    <tr>
       <td><a href="https://github.com/kettle-rb/ast-merge">ast-merge</a></td>
       <td>Text</td>
       <td>internal</td>
-      <td>Shared infrastructure for all <code>*-merge</code> gems</td>
+      <td>
+<strong>Infrastructure</strong>: Shared base classes and merge logic for all <code>*-merge</code> gems</td>
     </tr>
     <tr>
       <td><a href="https://github.com/kettle-rb/prism-merge">prism-merge</a></td>
@@ -430,19 +256,22 @@ result = merger.merge
     <tr>
       <td><a href="https://github.com/kettle-rb/json-merge">json-merge</a></td>
       <td>JSON</td>
-      <td><a href="https://github.com/tree-sitter/tree-sitter-json">tree-sitter-json</a></td>
+      <td>
+<a href="https://github.com/tree-sitter/tree-sitter-json">tree-sitter-json</a> (via tree_haver)</td>
       <td>Smart merge for JSON files</td>
     </tr>
     <tr>
       <td><a href="https://github.com/kettle-rb/jsonc-merge">jsonc-merge</a></td>
       <td>JSONC</td>
-      <td><a href="https://gitlab.com/WhyNotHugo/tree-sitter-jsonc">tree-sitter-jsonc</a></td>
+      <td>
+<a href="https://gitlab.com/WhyNotHugo/tree-sitter-jsonc">tree-sitter-jsonc</a> (via tree_haver)</td>
       <td>⚠️ Proof of concept; Smart merge for JSON with Comments</td>
     </tr>
     <tr>
       <td><a href="https://github.com/kettle-rb/bash-merge">bash-merge</a></td>
       <td>Bash</td>
-      <td><a href="https://github.com/tree-sitter/tree-sitter-bash">tree-sitter-bash</a></td>
+      <td>
+<a href="https://github.com/tree-sitter/tree-sitter-bash">tree-sitter-bash</a> (via tree_haver)</td>
       <td>Smart merge for Bash scripts</td>
     </tr>
     <tr>
@@ -454,26 +283,61 @@ result = merger.merge
     <tr>
       <td><a href="https://github.com/kettle-rb/dotenv-merge">dotenv-merge</a></td>
       <td>Dotenv</td>
-      <td>internal (<a href="https://github.com/bkeepers/dotenv">dotenv</a>)</td>
+      <td>internal</td>
       <td>Smart merge for <code>.env</code> files</td>
     </tr>
     <tr>
       <td><a href="https://github.com/kettle-rb/toml-merge">toml-merge</a></td>
       <td>TOML</td>
-      <td><a href="https://github.com/tree-sitter-grammars/tree-sitter-toml">tree-sitter-toml</a></td>
+      <td>
+<a href="https://github.com/emancu/toml-rb">Citrus + toml-rb</a> (default, via tree_haver), <a href="https://github.com/tree-sitter-grammars/tree-sitter-toml">tree-sitter-toml</a> (via tree_haver)</td>
       <td>Smart merge for TOML files</td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/kettle-rb/markdown-merge">markdown-merge</a></td>
+      <td>Markdown</td>
+      <td>
+<a href="https://github.com/gjtorikian/commonmarker">Commonmarker</a> / <a href="https://github.com/ioquatix/markly">Markly</a> (via tree_haver)</td>
+      <td>
+<strong>Foundation</strong>: Shared base for Markdown mergers with inner code block merging</td>
     </tr>
     <tr>
       <td><a href="https://github.com/kettle-rb/markly-merge">markly-merge</a></td>
       <td>Markdown</td>
-      <td><a href="https://github.com/kivikakk/markly">Markly</a></td>
-      <td>Smart merge for Markdown (CommonMark via libcmark-gfm)</td>
+      <td>
+<a href="https://github.com/ioquatix/markly">Markly</a> (via tree_haver)</td>
+      <td>Smart merge for Markdown (CommonMark via cmark-gfm C)</td>
     </tr>
     <tr>
       <td><a href="https://github.com/kettle-rb/commonmarker-merge">commonmarker-merge</a></td>
       <td>Markdown</td>
-      <td><a href="https://github.com/gjtorikian/commonmarker">Commonmarker</a></td>
-      <td>Smart merge for Markdown (CommonMark via comrak)</td>
+      <td>
+<a href="https://github.com/gjtorikian/commonmarker">Commonmarker</a> (via tree_haver)</td>
+      <td>Smart merge for Markdown (CommonMark via comrak Rust)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Example implementations</strong> for the gem templating use case:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Gem</th>
+      <th>Purpose</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://github.com/kettle-rb/kettle-dev">kettle-dev</a></td>
+      <td>Gem Development</td>
+      <td>Gem templating tool using <code>*-merge</code> gems</td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/kettle-rb/kettle-jem">kettle-jem</a></td>
+      <td>Gem Templating</td>
+      <td>Gem template library with smart merge support</td>
     </tr>
   </tbody>
 </table>
@@ -765,7 +629,7 @@ by following the instructions below.</p>
 
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
 
-<h3 id="simple-merge-1">Simple Merge</h3>
+<h3 id="simple-merge">Simple Merge</h3>
 
 <pre class="code language-ruby"><code class="language-ruby">require &quot;dotenv/merge&quot;
 
@@ -1012,9 +876,9 @@ Please consider sponsoring me or the project.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Fri Dec 12 15:15:31 2025 by
+  Generated on Thu Jan  1 15:21:08 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-3.4.7).
+  0.9.38 (ruby-4.0.0).
 </div>
 
     </div>
