@@ -82,7 +82,7 @@ Gem::Specification.new do |spec|
   spec.executables = []
 
   # Shared merge infrastructure
-  spec.add_dependency("ast-merge", "~> 1.0")                            # ruby >= 3.2.0
+  spec.add_dependency("ast-merge", "~> 2.0", ">= 2.0.6")                # ruby >= 3.2.0
 
   # Utilities
   spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.9")              # ruby >= 2.2.0
