@@ -81,8 +81,11 @@ Gem::Specification.new do |spec|
   # Listed files are the relative paths from bindir above.
   spec.executables = []
 
+  # Parser - tree_haver provides unified AST interfaces for tree-sitter, citrus, parslet & more
+  spec.add_dependency("tree_haver", "~> 5.0", ">= 5.0.3")               # ruby >= 3.2.0
+
   # Shared merge infrastructure
-  spec.add_dependency("ast-merge", "~> 2.0", ">= 2.0.6")                # ruby >= 3.2.0
+  spec.add_dependency("ast-merge", "~> 4.0", ">= 4.0.5")                # ruby >= 3.2.0
 
   # Utilities
   spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.9")              # ruby >= 2.2.0
