@@ -2,10 +2,10 @@
 
 # External RSpec & related config
 require "kettle/test/rspec"
-require "ast/merge/rspec"
 
 # Internal ENV config
 require_relative "config/debug"
+require_relative "config/tree_haver"
 
 # Config for development dependencies of this library
 # i.e., not configured by this library

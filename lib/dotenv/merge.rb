@@ -68,6 +68,18 @@ module Dotenv
   end
 end
 
+# Register with ast-merge's MergeGemRegistry for RSpec dependency tags
+# Only register if MergeGemRegistry is loaded (i.e., in test environment)
+if defined?(Ast::Merge::RSpec::MergeGemRegistry)
+  Ast::Merge::RSpec::MergeGemRegistry.register(
+    :dotenv_merge,
+    require_path: "dotenv/merge",
+    merger_class: "Dotenv::Merge::SmartMerger",
+    test_source: "KEY=value",
+    category: :config,
+  )
+end
+
 Dotenv::Merge::Version.class_eval do
   extend VersionGem::Basic
 end
