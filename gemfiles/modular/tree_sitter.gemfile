@@ -30,8 +30,6 @@ platform :mri do
       github: "pboling/ruby-tree-sitter",
       branch: "tree_haver",
       require: false # DO NOT LOAD, because conflicts with FFI
-    gem "tree_stump",
-      github: "pboling/tree_stump",
-      branch: "tree_haver"
+    gem "tree_stump", "~> 0.2"
   end
 end
