@@ -22,9 +22,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Updated documentation on hostile takeover of RubyGems
-  - https://dev.to/galtzo/hostile-takeover-of-rubygems-my-thoughts-5hlo
-
 ### Deprecated
 
 ### Removed
@@ -32,6 +29,29 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.0.3] - 2026-02-19
+
+- TAG: [v1.0.3][1.0.3t]
+- COVERAGE: 97.73% -- 345/353 lines in 8 files
+- BRANCH COVERAGE: 83.06% -- 103/124 branches in 8 files
+- 96.83% documented
+
+### Added
+
+- AGENTS.md
+
+### Changed
+
+- appraisal2 v3.0.6
+- kettle-test v1.0.10
+- stone_checksums v1.0.3
+- ast-merge v4.0.6
+- tree_haver v5.0.5
+- tree_stump v0.2.0
+  - fork no longer required, updates all applied upstream
+- Updated documentation on hostile takeover of RubyGems
+  - https://dev.to/galtzo/hostile-takeover-of-rubygems-my-thoughts-5hlo
 
 ## [1.0.2] - 2026-02-01
 
@@ -89,7 +109,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Initial release
 
-[Unreleased]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.2...v1.0.3
+[1.0.3t]: https://github.com/kettle-rb/dotenv-merge/releases/tag/v1.0.3
 [1.0.2]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.1...v1.0.2
 [1.0.2t]: https://github.com/kettle-rb/dotenv-merge/releases/tag/v1.0.2
 [1.0.1]: https://github.com/kettle-rb/dotenv-merge/compare/v1.0.0...v1.0.1
