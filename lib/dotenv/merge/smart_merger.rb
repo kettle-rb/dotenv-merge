@@ -131,28 +131,55 @@ module Dotenv
         template_stmts = @template_analysis.statements
         dest_stmts = @dest_analysis.statements
 
-        # Build signature maps
+        # Build signature maps (sig → [indices...])
         _template_sigs = build_signature_map(template_stmts, @template_analysis)
         dest_sigs = build_signature_map(dest_stmts, @dest_analysis)
 
         alignment = []
         matched_dest_indices = Set.new
 
+        # Per-signature cursor for sequential 1:1 matching of duplicates
+        sig_cursor = Hash.new(0)
+
         # First pass: find matches for template statements
         template_stmts.each_with_index do |stmt, t_idx|
           sig = @template_analysis.generate_signature(stmt)
 
           if sig && dest_sigs.key?(sig)
-            d_idx = dest_sigs[sig]
-            alignment << {
-              type: :match,
-              template_stmt: stmt,
-              dest_stmt: dest_stmts[d_idx],
-              template_index: t_idx,
-              dest_index: d_idx,
-              signature: sig,
-            }
-            matched_dest_indices << d_idx
+            # Find the next unconsumed dest index with this signature
+            dest_indices = dest_sigs[sig]
+            cursor = sig_cursor[sig]
+            d_idx = nil
+
+            while cursor < dest_indices.size
+              candidate = dest_indices[cursor]
+              unless matched_dest_indices.include?(candidate)
+                d_idx = candidate
+                break
+              end
+              cursor += 1
+            end
+
+            if d_idx
+              alignment << {
+                type: :match,
+                template_stmt: stmt,
+                dest_stmt: dest_stmts[d_idx],
+                template_index: t_idx,
+                dest_index: d_idx,
+                signature: sig,
+              }
+              matched_dest_indices << d_idx
+              sig_cursor[sig] = cursor + 1
+            else
+              # All dest copies consumed — template-only duplicate
+              alignment << {
+                type: :template_only,
+                template_stmt: stmt,
+                template_index: t_idx,
+                signature: sig,
+              }
+            end
           else
             alignment << {
               type: :template_only,
@@ -179,16 +206,16 @@ module Dotenv
         sort_alignment(alignment, dest_stmts.size)
       end
 
-      # Build a map of signature => statement index
+      # Build a map of signature => [statement indices...]
+      # Stores ALL occurrences so duplicates are matched 1:1 in order.
       # @param statements [Array] Statements
       # @param analysis [FileAnalysis] Analysis for signature generation
-      # @return [Hash]
+      # @return [Hash{Array => Array<Integer>}]
       def build_signature_map(statements, analysis)
-        map = {}
+        map = Hash.new { |h, k| h[k] = [] }
         statements.each_with_index do |stmt, idx|
           sig = analysis.generate_signature(stmt)
-          # First occurrence wins
-          map[sig] ||= idx if sig
+          map[sig] << idx if sig
         end
         map
       end

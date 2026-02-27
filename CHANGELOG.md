@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `build_signature_map` now stores all occurrences per signature (not just first),
+  and `align_statements` uses cursor-based positional matching. This prevents
+  collapsing duplicate env var declarations that appear multiple times in a file.
+  While unusual in dotenv files, the fix ensures correctness for all cases.
+
 ### Security
 
 ## [1.0.3] - 2026-02-19
