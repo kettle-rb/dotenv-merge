@@ -206,6 +206,45 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
     end
   end
 
+  describe "shared comment capability" do
+    let(:source) do
+      <<~DOTENV
+        # Header docs
+
+        API_KEY=secret # default secret
+
+        # Footer docs
+      DOTENV
+    end
+    let(:analysis) { described_class.new(source) }
+
+    it "reports source-augmented comment capability" do
+      expect(analysis.comment_capability).to be_a(Ast::Merge::Comment::Capability)
+      expect(analysis.comment_capability.source_augmented?).to be true
+    end
+
+    it "builds shared comment nodes for full-line and inline comments" do
+      expect(analysis.comment_nodes.map(&:line_number)).to eq([1, 3, 5])
+      expect(analysis.comment_node_at(3).to_s).to eq("# default secret")
+    end
+
+    it "builds a shared comment attachment for an assignment owner" do
+      owner = analysis.env_var("API_KEY")
+      attachment = analysis.comment_attachment_for(owner)
+
+      expect(attachment.leading_region.normalized_content).to eq("Header docs")
+      expect(attachment.inline_region.normalized_content).to eq("default secret")
+    end
+
+    it "builds a comment augmenter with postlude support" do
+      augmenter = analysis.comment_augmenter
+      owner = analysis.env_var("API_KEY")
+
+      expect(augmenter.attachment_for(owner).leading_region.normalized_content).to eq("Header docs")
+      expect(augmenter.postlude_region.normalized_content).to eq("Footer docs")
+    end
+  end
+
   describe "freeze block edge cases" do
     context "with unclosed freeze block" do
       let(:source) do

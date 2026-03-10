@@ -60,6 +60,7 @@ module Dotenv
     class DestinationParseError < ParseError; end
 
     autoload :DebugLogger, "dotenv/merge/debug_logger"
+    autoload :CommentTracker, "dotenv/merge/comment_tracker"
     autoload :EnvLine, "dotenv/merge/env_line"
     autoload :FreezeNode, "dotenv/merge/freeze_node"
     autoload :FileAnalysis, "dotenv/merge/file_analysis"

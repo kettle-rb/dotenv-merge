@@ -165,6 +165,88 @@ RSpec.describe Dotenv::Merge::SmartMerger do
         # Template comments/blanks are skipped even with add_template_only_nodes
         expect(result.to_s).not_to include("# Template comment")
       end
+
+      it "preserves destination heading comments and inline comments when template content wins" do
+        template = <<~DOTENV
+          # Template heading
+          API_KEY=template-value
+        DOTENV
+        destination = <<~DOTENV
+          # Destination heading
+
+          API_KEY=dest-value # local guidance
+        DOTENV
+
+        merger = described_class.new(template, destination, preference: :template)
+        result = merger.merge_result
+
+        expect(result.to_s).to include("# Destination heading\n\nAPI_KEY=template-value # local guidance")
+        expect(result.to_s).not_to include("API_KEY=dest-value")
+      end
+
+      it "keeps grouped destination comment sections and blank lines around template-preferred matches" do
+        template = <<~DOTENV
+          APP_ENV=production
+          DATABASE_URL=postgres://prod/db
+        DOTENV
+        destination = <<~DOTENV
+          # App settings
+          APP_ENV=development # local mode
+
+          # Database settings
+          DATABASE_URL=postgres://localhost/dev
+        DOTENV
+
+        merger = described_class.new(template, destination, preference: :template)
+        result = merger.merge_result
+
+        expect(result.to_s).to include("# App settings\nAPP_ENV=production # local mode\n\n# Database settings\nDATABASE_URL=postgres://prod/db")
+      end
+    end
+
+    context "with document boundary comments" do
+      let(:template) do
+        <<~DOTENV
+          API_KEY=template
+        DOTENV
+      end
+      let(:destination) do
+        <<~DOTENV
+          # Header docs
+
+          API_KEY=destination
+
+          # Footer docs
+        DOTENV
+      end
+
+      it "preserves destination header and footer comments around a matched assignment" do
+        merger = described_class.new(template, destination, preference: :template)
+        result = merger.merge_result
+
+        expect(result.to_s).to include("# Header docs")
+        expect(result.to_s).to include("API_KEY=template")
+        expect(result.to_s).to include("# Footer docs")
+      end
+    end
+
+    context "with a comment-only destination" do
+      let(:template) { "API_KEY=template\n" }
+      let(:destination) do
+        <<~DOTENV
+          # Local-only notes
+          # Still configuring this file
+        DOTENV
+      end
+
+      it "preserves the destination comments when there are no assignments to match" do
+        merger = described_class.new(template, destination)
+        result = merger.merge_result
+
+        expect(result.to_s).to include("# Local-only notes")
+        expect(result.to_s).to include("# Still configuring this file")
+        expect(result.to_s).not_to include("API_KEY=template")
+      end
     end
 
     context "with export statements" do
@@ -441,6 +523,32 @@ RSpec.describe Dotenv::Merge::SmartMerger do
       expect(result.to_s).to include("dotenv-merge:unfreeze")
       # Regular dest-only should also be preserved
       expect(result.to_s).to include("OTHER_VAR=other")
+    end
+  end
+
+  describe "remove_template_missing_nodes with destination-only assignment comments" do
+    let(:template) do
+      <<~DOTENV
+        KEEP_VAR=keep
+      DOTENV
+    end
+    let(:destination) do
+      <<~DOTENV
+        KEEP_VAR=keep
+
+        # Legacy docs
+        REMOVE_VAR=remove-me # local-only note
+      DOTENV
+    end
+
+    it "preserves heading comments and promotes inline comments when removing destination-only assignments" do
+      merger = described_class.new(template, destination, remove_template_missing_nodes: true)
+      result = merger.merge_result
+
+      expect(result.to_s).to include("# Legacy docs")
+      expect(result.to_s).to include("# local-only note")
+      expect(result.to_s).not_to include("REMOVE_VAR=remove-me")
+      expect(result.to_s).to include("KEEP_VAR=keep")
     end
   end
 end

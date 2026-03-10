@@ -75,11 +75,35 @@ RSpec.describe Dotenv::Merge::EnvLine do
       end
     end
 
+    context "with # inside double-quoted value" do
+      let(:line) { described_class.new('PASSWORD="abc#123"', 1) }
+
+      it "keeps the # as part of the value" do
+        expect(line.value).to eq("abc#123")
+      end
+    end
+
+    context "with # inside single-quoted value" do
+      let(:line) { described_class.new("PASSWORD='abc#123'", 1) }
+
+      it "keeps the # as part of the value" do
+        expect(line.value).to eq("abc#123")
+      end
+    end
+
     context "with inline comment" do
       let(:line) { described_class.new("PORT=3000 # default port", 1) }
 
       it "strips inline comment" do
         expect(line.value).to eq("3000")
+      end
+    end
+
+    context "with # in unquoted value without separating whitespace" do
+      let(:line) { described_class.new("PASSWORD=abc#123", 1) }
+
+      it "keeps the # as part of the value" do
+        expect(line.value).to eq("abc#123")
       end
     end
 

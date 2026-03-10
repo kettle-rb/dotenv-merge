@@ -33,6 +33,8 @@ module Dotenv
       # @param preference [Symbol, Hash] :destination, :template, or per-type Hash
       # @param add_template_only_nodes [Boolean] Whether to add template-only env vars
       #   (default: false)
+      # @param remove_template_missing_nodes [Boolean] Whether to remove destination-only
+      #   env vars that do not exist in the template (default: false)
       # @param freeze_token [String] Token for freeze block markers
       #   (default: "dotenv-merge")
       # @param match_refiner [#call, nil] Match refiner for fuzzy matching
@@ -47,6 +49,7 @@ module Dotenv
         signature_generator: nil,
         preference: :destination,
         add_template_only_nodes: false,
+        remove_template_missing_nodes: false,
         freeze_token: nil,
         match_refiner: nil,
         regions: nil,
@@ -54,12 +57,15 @@ module Dotenv
         node_typing: nil,
         **options
       )
+        @remove_template_missing_nodes = remove_template_missing_nodes
+
         super(
           template_content,
           dest_content,
           signature_generator: signature_generator,
           preference: preference,
           add_template_only_nodes: add_template_only_nodes,
+          remove_template_missing_nodes: remove_template_missing_nodes,
           freeze_token: freeze_token,
           match_refiner: match_refiner,
           regions: regions,
@@ -273,7 +279,7 @@ module Dotenv
 
         case resolved_pref
         when :template
-          @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_TEMPLATE)
+          emit_template_preferred_match(entry)
         when :destination
           @result.add_from_destination(entry[:dest_index], decision: MergeResult::DECISION_DESTINATION)
         else
@@ -343,9 +349,60 @@ module Dotenv
 
         if dest_stmt.is_a?(FreezeNode)
           @result.add_freeze_block(dest_stmt)
+        elsif remove_destination_only_assignment?(dest_stmt)
+          emit_removed_destination_assignment_comments(dest_stmt)
         else
           @result.add_from_destination(entry[:dest_index], decision: MergeResult::DECISION_DESTINATION)
         end
+      end
+
+      def emit_template_preferred_match(entry)
+        template_stmt = entry[:template_stmt]
+        dest_stmt = entry[:dest_stmt]
+
+        unless preserve_destination_inline_comment_for_template_match?(template_stmt, dest_stmt)
+          @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_TEMPLATE)
+          return
+        end
+
+        @result.add_raw(
+          [template_line_with_destination_inline_comment(template_stmt, dest_stmt)],
+          decision: MergeResult::DECISION_TEMPLATE,
+        )
+      end
+
+      def preserve_destination_inline_comment_for_template_match?(template_stmt, dest_stmt)
+        return false unless template_stmt.is_a?(EnvLine) && dest_stmt.is_a?(EnvLine)
+        return false unless template_stmt.assignment? && dest_stmt.assignment?
+        return false unless destination_inline_comment_for(dest_stmt)
+
+        template_inline_comment_for(template_stmt).nil?
+      end
+
+      def template_line_with_destination_inline_comment(template_stmt, dest_stmt)
+        inline_comment = destination_inline_comment_for(dest_stmt)
+        return template_stmt.raw unless inline_comment
+
+        "#{template_stmt.raw.rstrip} #{inline_comment[:raw]}"
+      end
+
+      def emit_removed_destination_assignment_comments(dest_stmt)
+        inline_comment = destination_inline_comment_for(dest_stmt)
+        return unless inline_comment
+
+        @result.add_raw([inline_comment[:raw]], decision: MergeResult::DECISION_DESTINATION)
+      end
+
+      def remove_destination_only_assignment?(stmt)
+        @remove_template_missing_nodes && stmt.is_a?(EnvLine) && stmt.assignment?
+      end
+
+      def destination_inline_comment_for(stmt)
+        @dest_analysis.comment_tracker.inline_comment_at(stmt.line_number)
+      end
+
+      def template_inline_comment_for(stmt)
+        @template_analysis.comment_tracker.inline_comment_at(stmt.line_number)
       end
     end
   end

@@ -21,4 +21,24 @@ RSpec.describe "Dotenv reproducible merge" do
       it_behaves_like "a reproducible merge", "03_value_changed"
     end
   end
+
+  describe "comment-heavy grouped scenarios" do
+    context "when exported settings keep destination headings, inline notes, and section spacing" do
+      it_behaves_like "a reproducible merge", "04_grouped_export_comments_template_preference", {
+        preference: :template,
+      }
+    end
+
+    context "when duplicate keys require stable sequential comment association" do
+      it_behaves_like "a reproducible merge", "05_duplicate_keys_comment_association", {
+        preference: :template,
+      }
+    end
+
+    context "when quoted values containing # remain values rather than promoted comments" do
+      it_behaves_like "a reproducible merge", "06_quoted_hash_values_grouped_comments", {
+        preference: :template,
+      }
+    end
+  end
 end
