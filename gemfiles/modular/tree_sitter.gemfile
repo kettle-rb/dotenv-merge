@@ -11,7 +11,7 @@
 gem "ffi", require: false # DO NOT LOAD, because conflicts with MRI
 
 # Set KETTLE_RB_DEV=true for local development
-if ENV.fetch("KETTLE_RB_DEV", "false").casecmp?("true")
+unless ENV.fetch("KETTLE_RB_DEV", "false").casecmp("false").zero?
   gem "tree_haver", path: "../../../tree_haver"
   gem "ast-merge", path: "../../../../"
 end
