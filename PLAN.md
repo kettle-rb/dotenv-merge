@@ -56,7 +56,21 @@ Add shared Comment AST & Merge support to `dotenv-merge` so `.env` files preserv
 - Phase 1 target.
 - Recommended immediately after `jsonc-merge` because the line-oriented model gives fast feedback on shared comment APIs without parser complexity.
 
+## Latest `ast-merge` Comment Logic Checklist (2026-03-13)
+- [x] Shared capability plumbing: `comment_capability`, `comment_augmenter`, normalized region/attachment access
+- [x] Document boundary ownership: prelude/postlude and comment-only file handling
+- [x] Matched-node fallback: destination heading/inline comment preservation under template preference
+- [x] Removed-node preservation: destination-only assignment comment preservation and inline promotion
+- [x] Recursive/fixture parity: grouped `.env` scenarios and reproducible comment-heavy fixtures
+
+Current parity status: complete for the latest shared `ast-merge` comment rollout shape, and the local workspace-path gem wiring has now been revalidated under `KETTLE_RB_DEV`.
+
 ## Progress
+- 2026-03-13: Local workspace-path validation rechecked after modular gemfile wiring normalization.
+- Replaced direct local `path:` overrides in modular tree-sitter gemfiles with the shared `nomono` local-override pattern and reran the full `dotenv-merge` suite in workspace mode; the suite is green.
+- 2026-03-11: Plan sync completed.
+- Confirmed `dotenv-merge` remains aligned to the latest shared `ast-merge` comment checklist with all rollout slices complete.
+- This plan now serves as a completed Phase 1 reference alongside `jsonc-merge`.
 - 2026-03-09: Phase 1 / Slice 1 completed.
 - Added `Dotenv::Merge::CommentTracker` with shared comment capability plumbing for hash-style full-line comments and safe inline comments on unquoted assignments.
 - Exposed `comment_capability`, `comment_nodes`, `comment_node_at`, `comment_region_for_range`, `comment_augmenter`, and `comment_attachment_for` from `FileAnalysis`.
@@ -91,7 +105,7 @@ Status: complete on 2026-03-09.
 
 Status: complete on 2026-03-09.
 
-Next recommended resume point: start Slice 3 by promoting realistic grouped `.env` scenarios into reproducible fixtures, especially exported assignments, duplicate keys, and quoted values containing `#`.
+Next recommended resume point: move to the next rollout target; keep this gem in regression-only mode unless a new edge case appears.
 
 ### Slice 3 — Realistic `.env` grouping + fixtures
 - Expand to `export` assignments, duplicate keys, and quoted values containing `#`.
