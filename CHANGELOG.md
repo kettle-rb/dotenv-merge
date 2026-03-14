@@ -20,7 +20,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Added a shared line-oriented comment tracker surface with normalized comment capability / augmenter / region / attachment APIs, including safeguards for distinguishing real inline comments from `#` inside values
+
 ### Changed
+
+- Preserved destination heading and inline comments through template-preferred matched assignments while keeping grouped blank-line-separated sections stable
+- Preserved grouped destination heading comments and promoted removed inline comments into standalone `# ...` lines when `remove_template_missing_nodes: true` removes an assignment
 
 ### Deprecated
 
