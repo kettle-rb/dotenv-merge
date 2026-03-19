@@ -245,6 +245,42 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
     end
   end
 
+  describe "shared layout compliance" do
+    let(:source) do
+      <<~DOTENV
+
+        API_KEY=secret
+
+        DEBUG=true
+
+      DOTENV
+    end
+
+    let(:analysis) { described_class.new(source) }
+    let(:first_owner) { analysis.env_var("API_KEY") }
+    let(:second_owner) { analysis.env_var("DEBUG") }
+    let(:layout_augmenter) { analysis.layout_augmenter(owners: [first_owner, second_owner]) }
+    let(:layout_attachment) { layout_augmenter.attachment_for(first_owner) }
+
+    it_behaves_like "Ast::Merge::Layout::Attachment" do
+      let(:expected_attachment_owner) { first_owner }
+      let(:expected_leading_gap_kind) { :preamble }
+      let(:expected_trailing_gap_kind) { :interstitial }
+      let(:expected_gap_ranges) { [1..1, 3..3] }
+      let(:expected_leading_controls_output) { true }
+      let(:expected_trailing_controls_output) { false }
+    end
+
+    it_behaves_like "Ast::Merge::Layout::Augmenter" do
+      let(:augmenter_owner) { first_owner }
+      let(:expected_preamble_range) { 1..1 }
+      let(:expected_postlude_range) { 5..5 }
+      let(:expected_interstitial_ranges) { [3..3] }
+      let(:expected_owner_leading_gap_kind) { :preamble }
+      let(:expected_owner_trailing_gap_kind) { :interstitial }
+    end
+  end
+
   describe "freeze block edge cases" do
     context "with unclosed freeze block" do
       let(:source) do
