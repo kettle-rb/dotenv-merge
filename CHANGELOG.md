@@ -24,6 +24,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Adopted the shared `Ast::Merge::Layout` contract for line-oriented dotenv ownership, including shared layout compliance coverage for grouped heading/comment spacing
 - Preserved destination heading and inline comments through template-preferred matched assignments while keeping grouped blank-line-separated sections stable
 - Preserved grouped destination heading comments and promoted removed inline comments into standalone `# ...` lines when `remove_template_missing_nodes: true` removes an assignment
 - Adopted `Ast::Merge::TrailingGroups::AlignmentSort` for the shared alignment-based model of template-only dotenv assignment ordering instead of maintaining a repo-local sort strategy
