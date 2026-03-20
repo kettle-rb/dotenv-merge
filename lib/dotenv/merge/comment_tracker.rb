@@ -4,6 +4,10 @@ module Dotenv
   module Merge
     # Extracts and tracks dotenv comments with their line numbers from source.
     #
+    # Inherits shared lookup, query, region-building, and attachment API from
+    # +Ast::Merge::Comment::HashTrackerBase+. Only format-specific comment
+    # extraction and owner resolution are overridden here.
+    #
     # Dotenv supports hash-style comments as either:
     # - full-line comments (`# comment`)
     # - safe inline comments on unquoted assignments (`KEY=value # comment`)
@@ -11,145 +15,12 @@ module Dotenv
     # Slice 1 intentionally stays conservative around quoted values. `#` inside
     # quoted values is not treated as a comment, and quoted assignments with
     # trailing comment-like text are left for later slices.
-    class CommentTracker
-      FULL_LINE_COMMENT_REGEX = /\A(?<indent>\s*)#\s?(?<text>.*)\z/
+    class CommentTracker < Ast::Merge::Comment::HashTrackerBase
       INLINE_COMMENT_REGEX = /\s+#\s?(?<text>.*)\z/
-
-      attr_reader :comments, :lines
 
       def initialize(source_or_lines)
         @line_objects = normalize_line_objects(source_or_lines)
-        @lines = @line_objects.map(&:raw)
-        @comments = extract_comments
-        @comments_by_line = @comments.group_by { |comment| comment[:line] }
-      end
-
-      def comment_at(line_num)
-        @comments_by_line[line_num]&.first
-      end
-
-      def comment_nodes
-        @comment_nodes ||= @comments.map do |comment|
-          Ast::Merge::Comment::TrackedHashAdapter.node(comment, style: :hash_comment)
-        end
-      end
-
-      def comment_node_at(line_num)
-        comment = comment_at(line_num)
-        return unless comment
-
-        Ast::Merge::Comment::TrackedHashAdapter.node(comment, style: :hash_comment)
-      end
-
-      def comments_in_range(range)
-        @comments.select { |comment| range.cover?(comment[:line]) }
-      end
-
-      def comment_region_for_range(range, kind:, full_line_only: false)
-        selected = comments_in_range(range)
-        selected = selected.select { |comment| comment[:full_line] } if full_line_only
-
-        Ast::Merge::Comment::TrackedHashAdapter.region(
-          kind: kind,
-          comments: selected,
-          style: :hash_comment,
-          metadata: {
-            range: range,
-            full_line_only: full_line_only,
-            source: :comment_tracker,
-          },
-        )
-      end
-
-      def leading_comment_region_before(line_num, comments: nil)
-        selected = comments || leading_comments_before(line_num)
-        selected = selected.select { |comment| comment[:full_line] }
-        return if selected.empty?
-
-        Ast::Merge::Comment::TrackedHashAdapter.region(
-          kind: :leading,
-          comments: selected,
-          style: :hash_comment,
-          metadata: {
-            line_num: line_num,
-            source: :comment_tracker,
-          },
-        )
-      end
-
-      def inline_comment_region_at(line_num, comment: nil)
-        selected = [comment || inline_comment_at(line_num)].compact
-        return if selected.empty?
-
-        Ast::Merge::Comment::TrackedHashAdapter.region(
-          kind: :inline,
-          comments: selected,
-          style: :hash_comment,
-          metadata: {
-            line_num: line_num,
-            source: :comment_tracker,
-          },
-        )
-      end
-
-      def comment_attachment_for(owner, line_num: nil, leading_comments: nil, inline_comment: nil, **metadata)
-        resolved_line_num = line_num || owner_line_num(owner)
-        leading_region = if resolved_line_num
-          leading_comment_region_before(resolved_line_num, comments: leading_comments)
-        end
-        inline_region = if resolved_line_num
-          inline_comment_region_at(resolved_line_num, comment: inline_comment)
-        end
-
-        Ast::Merge::Comment::Attachment.new(
-          owner: owner,
-          leading_region: leading_region,
-          inline_region: inline_region,
-          metadata: metadata.merge(
-            line_num: resolved_line_num,
-            source: :comment_tracker,
-          ),
-        )
-      end
-
-      def leading_comments_before(line_num)
-        leading = []
-        current = line_num - 1
-
-        current -= 1 while current >= 1 && blank_line?(current)
-
-        while current >= 1
-          comment = comment_at(current)
-          break unless comment && comment[:full_line]
-
-          leading.unshift(comment)
-          current -= 1
-          current -= 1 while current >= 1 && blank_line?(current)
-        end
-
-        leading
-      end
-
-      def inline_comment_at(line_num)
-        comment = comment_at(line_num)
-        comment if comment && !comment[:full_line]
-      end
-
-      def full_line_comment?(line_num)
-        comment = comment_at(line_num)
-        comment&.dig(:full_line) || false
-      end
-
-      def blank_line?(line_num)
-        return false if line_num < 1 || line_num > @lines.length
-
-        @lines[line_num - 1].to_s.strip.empty?
-      end
-
-      def line_at(line_num)
-        return if line_num < 1 || line_num > @lines.length
-
-        @lines[line_num - 1]
+        super(@line_objects.map(&:raw))
       end
 
       def augment(owners: [], **options)

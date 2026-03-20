@@ -1,0 +1,8 @@
+{
+  "Gemfile:4280870976": [
+    [18, 1, 360, "Style/InvertibleUnlessCondition: Prefer `if ENV.fetch(\"KETTLE_RB_DEV\", \"false\").casecmp(\"false\").nonzero?` over `unless ENV.fetch(\"KETTLE_RB_DEV\", \"false\").casecmp(\"false\").zero?`.", 2787977]
+  ],
+  "gemfiles/modular/tree_sitter.gemfile:3285912161": [
+    [15, 1, 112, "Style/InvertibleUnlessCondition: Prefer `if ENV.fetch(\"KETTLE_RB_DEV\", \"false\").casecmp(\"false\").nonzero?` over `unless ENV.fetch(\"KETTLE_RB_DEV\", \"false\").casecmp(\"false\").zero?`.", 2718008714]
+  ]
+}
