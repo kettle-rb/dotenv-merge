@@ -1,4 +1,4 @@
-# AGENTS.md - dotenv-merge Development Guide
+# AGENTS.md - Development Guide
 
 ## 🎯 Project Overview
 
@@ -254,10 +254,11 @@ mise exec -C /path/to/project -- bin/kettle-soup-cover -d
 ```
 
 **Key ENV variables** (set in `mise.toml`, with local overrides in `.env.local`):
-- `K_SOUP_COV_DO=true` – Enable coverage
-- `K_SOUP_COV_MIN_LINE` – Line coverage threshold
-- `K_SOUP_COV_MIN_BRANCH` – Branch coverage threshold
-- `K_SOUP_COV_MIN_HARD=true` – Fail if thresholds not met
+
+- Running tests (`bundle exec rspec`)
+- Installing dependencies (`bundle install`)
+- Simple commands that do not require much shell escaping
+- Running scripts (prefer writing a script over a complicated command with shell escaping)
 
 ### Code Quality
 
@@ -419,10 +420,10 @@ kettle-changelog && kettle-release
 
 Only use terminal for:
 
-- Running tests (`bundle exec rspec`)
-- Installing dependencies (`bundle install`)
-- Simple commands that do not require much shell escaping
-- Running scripts (prefer writing a script over a complicated command with shell escaping)
+- `K_SOUP_COV_DO=true` – Enable coverage
+- `K_SOUP_COV_MIN_LINE` – Line coverage threshold
+- `K_SOUP_COV_MIN_BRANCH` – Branch coverage threshold
+- `K_SOUP_COV_MIN_HARD=true` – Fail if thresholds not met
 
 ## 💡 Key Insights
 
