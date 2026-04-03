@@ -82,7 +82,7 @@ Gem::Specification.new do |spec|
   spec.executables = []
 
   # Parser - tree_haver provides unified AST interfaces for tree-sitter, citrus, parslet & more
-  spec.add_dependency("tree_haver", "~> 5.0", ">= 5.0.5")               # ruby >= 3.2.0
+  spec.add_dependency("tree_haver", "~> 6.0", ">= 6.0.0")               # ruby >= 3.2.0
 
   # Shared merge infrastructure
   spec.add_dependency("ast-merge", "~> 4.0", ">= 4.0.6")                # ruby >= 3.2.0
