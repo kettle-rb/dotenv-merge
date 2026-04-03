@@ -10,7 +10,6 @@ local_gems = %w[
   ast-merge
   bash-merge
   json-merge
-  jsonc-merge
   markdown-merge
   prism-merge
   psych-merge
