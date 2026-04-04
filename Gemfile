@@ -36,21 +36,8 @@ eval_gemfile "gemfiles/modular/optional.gemfile"
 ### Std Lib Extracted Gems
 eval_gemfile "gemfiles/modular/x_std_libs.gemfile"
 
-# See unlocked_deps appraisal for more details on irb inclusion
-gem "irb", "~> 1.17" # ruby >= 2.7
-
-unless ENV.fetch("KETTLE_RB_DEV", "false").casecmp("false").zero?
-  require File.expand_path("../nomono/lib/nomono/bundler", __dir__)
-
-  eval_nomono_gems(
-    gems: %w[ast-merge],
-    prefix: "KETTLE_RB",
-    path_env: "KETTLE_RB_DEV",
-    vendored_gems_env: "VENDORED_GEMS",
-    vendor_gem_dir_env: "VENDOR_GEM_DIR",
-    debug_env: "KETTLE_DEV_DEBUG",
-  )
-end
-
 # Templating (env-switched: KETTLE_RB_DEV=true for local paths)
 eval_gemfile "gemfiles/modular/templating.gemfile"
+
+# See unlocked_deps appraisal for more details on irb inclusion
+gem "irb", "~> 1.17" # ruby >= 2.7
