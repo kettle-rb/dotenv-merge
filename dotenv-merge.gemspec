@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.summary = "🍲 Intelligent .env file merging using structured parsing"
   spec.description = "🍲 Dotenv::Merge provides smart .env file merging that preserves comments, understands variable assignments, and supports freeze blocks for protecting sensitive configuration. Perfect for merging environment templates with local overrides."
   spec.homepage = "https://github.com/kettle-rb/dotenv-merge"
-  spec.licenses = ["AGPL-3.0-only", "PolyForm-Small-Business-1.0.0", "LicenseRef-Big-Time-Public-License"]
+  spec.licenses = ["AGPL-3.0-only"]
   spec.required_ruby_version = ">= 3.2.0"
 
   # Linux distros often package gems and securely certify them independent
