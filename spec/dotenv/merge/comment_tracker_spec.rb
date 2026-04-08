@@ -84,7 +84,8 @@ RSpec.describe Dotenv::Merge::CommentTracker do
       attachment = augmenter.attachment_for(owner)
 
       expect(augmenter.capability.source_augmented?).to be true
-      expect(attachment.leading_region.normalized_content).to eq("Header docs")
+      expect(attachment.leading_region).to be_nil
+      expect(augmenter.preamble_region.normalized_content).to eq("Header docs")
       expect(attachment.inline_region.normalized_content).to eq("default secret")
       expect(augmenter.postlude_region.normalized_content).to eq("Footer docs")
     end

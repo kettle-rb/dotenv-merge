@@ -232,7 +232,8 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
       owner = analysis.env_var("API_KEY")
       attachment = analysis.comment_attachment_for(owner)
 
-      expect(attachment.leading_region.normalized_content).to eq("Header docs")
+      expect(attachment.leading_region).to be_nil
+      expect(analysis.comment_augmenter.preamble_region.normalized_content).to eq("Header docs")
       expect(attachment.inline_region.normalized_content).to eq("default secret")
     end
 
@@ -240,7 +241,8 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
       augmenter = analysis.comment_augmenter
       owner = analysis.env_var("API_KEY")
 
-      expect(augmenter.attachment_for(owner).leading_region.normalized_content).to eq("Header docs")
+      expect(augmenter.attachment_for(owner).leading_region).to be_nil
+      expect(augmenter.preamble_region.normalized_content).to eq("Header docs")
       expect(augmenter.postlude_region.normalized_content).to eq("Footer docs")
     end
   end
