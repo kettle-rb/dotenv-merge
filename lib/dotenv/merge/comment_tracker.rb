@@ -16,10 +16,9 @@ module Dotenv
     # quoted values is not treated as a comment, and quoted assignments with
     # trailing comment-like text are left for later slices.
     class CommentTracker < Ast::Merge::Comment::HashTrackerBase
-      INLINE_COMMENT_REGEX = /\s+#\s?(?<text>.*)\z/
-
       def initialize(source_or_lines)
         @line_objects = normalize_line_objects(source_or_lines)
+        @line_parser = Ast::Merge::Comment::QuotedHashLineParser.new
         super(@line_objects.map(&:raw))
       end
 
@@ -78,18 +77,15 @@ module Dotenv
         stripped_value = value_part.lstrip
         return if stripped_value.start_with?("\"", "'")
 
-        match = value_part.match(INLINE_COMMENT_REGEX)
-        return unless match
-
-        text = match[:text].to_s
-        raw = text.empty? ? "#" : "# #{text}"
+        parsed = @line_parser.parse(value_part)
+        return unless parsed&.inline?
 
         {
           line: line.line_number,
           indent: leading_indent(line.raw),
-          text: text,
+          text: parsed.text,
           full_line: false,
-          raw: raw,
+          raw: parsed.raw,
         }
       end
 
