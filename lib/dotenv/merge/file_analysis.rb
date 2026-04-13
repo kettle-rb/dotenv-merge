@@ -74,6 +74,20 @@ module Dotenv
         @comment_capability ||= comment_tracker.augment(owners: []).capability
       end
 
+      # Describe how dotenv merges currently own and emit comments.
+      #
+      # Dotenv comment handling is source-augmented and emitted through the
+      # synthetic merge layer.
+      #
+      # @return [Ast::Merge::Comment::SupportStyle]
+      def comment_support_style
+        @comment_support_style ||= shared_comment_support_style(
+          source: :dotenv_source,
+          style: :hash_comment,
+          read_strategy: :source_augmented_synthetic,
+        )
+      end
+
       # Get all tracked comments converted to shared Ast::Merge comment nodes.
       #
       # @return [Array<Ast::Merge::Comment::Line>]
@@ -121,11 +135,16 @@ module Dotenv
       # @param options [Hash] Additional metadata / lookup overrides
       # @return [Ast::Merge::Comment::Attachment]
       def comment_attachment_for(owner, **options)
-        merge_comment_attachment_with_layout(
+        shared_comment_attachment_for(
           owner,
-          comment_augmenter(**options).attachment_for(owner),
+          tracker_attachment: comment_augmenter(**options).attachment_for(owner),
           **options,
         )
+      end
+
+      # @return [Symbol]
+      def comment_attachment_strategy
+        :tracker_layout_merge
       end
 
       # Get assignment lines (not in freeze blocks)

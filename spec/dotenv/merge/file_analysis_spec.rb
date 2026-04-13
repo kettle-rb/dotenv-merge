@@ -246,6 +246,12 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
       expect(analysis.comment_capability.source_augmented?).to be true
     end
 
+    it "reports source-augmented synthetic comment support style" do
+      expect(analysis.comment_support_style.source_augmented_synthetic?).to be true
+      expect(analysis.comment_support_style.details[:source]).to eq(:dotenv_source)
+      expect(analysis.comment_support_style.details[:style]).to eq(:hash_comment)
+    end
+
     it "builds shared comment nodes for full-line and inline comments" do
       expect(analysis.comment_nodes.map(&:line_number)).to eq([1, 3, 5])
       expect(analysis.comment_node_at(3).to_s).to eq("# default secret")
