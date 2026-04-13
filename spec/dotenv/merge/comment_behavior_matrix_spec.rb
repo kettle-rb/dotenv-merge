@@ -2,7 +2,7 @@
 
 require "ast/merge/rspec/shared_examples"
 
-RSpec.describe "dotenv comment behavior matrix" do
+RSpec.describe Dotenv::Merge::SmartMerger, "comment behavior matrix" do
   extend Ast::Merge::RSpec::CommentBehaviorMatrixAdapters
 
   it_behaves_like "Ast::Merge::CommentBehaviorMatrix" do
