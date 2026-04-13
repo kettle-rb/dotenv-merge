@@ -1,0 +1,7 @@
+{
+  "spec/dotenv/merge/comment_behavior_matrix_spec.rb:3945013314": [
+    [5, 1, 68, "RSpec/SpecFilePathFormat: Spec path should end with `dotenv/merge/smart_merger*comment_behavior_matrix*_spec.rb`.", 3780462064],
+    [5, 44, 25, "RSpec/DescribeMethod: The second argument to describe should be the method being tested. '#instance' or '.class'.", 1921084705],
+    [11, 21, 26, "RSpec/DescribedClass: Use `described_class` instead of `Dotenv::Merge::SmartMerger`.", 3649204268]
+  ]
+}
