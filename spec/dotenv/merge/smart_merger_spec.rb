@@ -77,6 +77,25 @@ RSpec.describe Dotenv::Merge::SmartMerger do
           result = merger.merge_result
           expect(result.to_s).to include("NEW_VAR=new_value")
         end
+
+        it "inserts template-only prefix variables before the first matched anchor" do
+          template = <<~DOTENV
+            ALPHA=1
+            BETA=2
+          DOTENV
+          destination = <<~DOTENV
+            BETA=9
+          DOTENV
+
+          merger = described_class.new(template, destination, add_template_only_nodes: true)
+
+          expect(merger.merge).to eq(
+            <<~DOTENV,
+              ALPHA=1
+              BETA=9
+            DOTENV
+          )
+        end
       end
     end
 
@@ -549,6 +568,24 @@ RSpec.describe Dotenv::Merge::SmartMerger do
       expect(result.to_s).to include("# local-only note")
       expect(result.to_s).not_to include("REMOVE_VAR=remove-me")
       expect(result.to_s).to include("KEEP_VAR=keep")
+    end
+
+    it "preserves trailing full-line docs when removing destination-only assignments" do
+      destination = <<~DOTENV
+        REMOVE_VAR=remove-me
+        # trailing docs
+        KEEP_VAR=keep
+      DOTENV
+
+      merger = described_class.new(template, destination, remove_template_missing_nodes: true)
+      result = merger.merge_result
+
+      expect(result.to_s).to eq(
+        <<~DOTENV,
+          # trailing docs
+          KEEP_VAR=keep
+        DOTENV
+      )
     end
   end
 end

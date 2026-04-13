@@ -176,6 +176,29 @@ RSpec.describe Dotenv::Merge::FileAnalysis do
     end
   end
 
+  describe "#structural_owners" do
+    let(:source) do
+      <<~DOTENV
+        # Header docs
+        API_KEY=secret
+
+        # dotenv-merge:freeze
+        LOCKED=value
+        # dotenv-merge:unfreeze
+
+        DEBUG=true
+      DOTENV
+    end
+
+    it "returns assignments and freeze blocks in source order" do
+      analysis = described_class.new(source)
+
+      expect(analysis.structural_owners.map { |owner| owner.class.name.split("::").last }).to eq(
+        %w[EnvLine FreezeNode EnvLine],
+      )
+    end
+  end
+
   describe "#generate_signature with custom generator" do
     let(:source) do
       <<~DOTENV

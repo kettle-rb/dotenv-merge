@@ -123,7 +123,7 @@ module Dotenv
       def comment_attachment_for(owner, **options)
         merge_comment_attachment_with_layout(
           owner,
-          comment_tracker.comment_attachment_for(owner, **options),
+          comment_augmenter(**options).attachment_for(owner),
           **options,
         )
       end
@@ -132,6 +132,17 @@ module Dotenv
       # @return [Array<EnvLine>]
       def assignment_lines
         @statements.select { |stmt| stmt.is_a?(EnvLine) && stmt.assignment? }
+      end
+
+      # Get merge-relevant structural owners in source order.
+      # For dotenv this means assignment lines plus integrated freeze blocks,
+      # excluding standalone comments, blanks, and invalid lines.
+      #
+      # @return [Array<EnvLine, FreezeNode>]
+      def structural_owners
+        @structural_owners ||= @statements.select do |stmt|
+          stmt.is_a?(FreezeNode) || (stmt.is_a?(EnvLine) && stmt.assignment?)
+        end
       end
 
       # Get all assignment lines including those in freeze blocks
@@ -182,9 +193,7 @@ module Dotenv
       private
 
       def comment_augmenter_default_owners
-        @comment_augmenter_default_owners ||= @statements.select do |stmt|
-          stmt.is_a?(FreezeNode) || (stmt.is_a?(EnvLine) && stmt.assignment?)
-        end
+        structural_owners
       end
 
       # Parse source into EnvLine objects

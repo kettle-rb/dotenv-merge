@@ -25,6 +25,8 @@ module Dotenv
     #     node_typing: { "EnvLine" => ->(n) { NodeTyping.with_merge_type(n, :secret) } },
     #     preference: { default: :destination, secret: :template })
     class SmartMerger < ::Ast::Merge::SmartMergerBase
+      include Ast::Merge::TrailingGroups::DestIterate
+
       # Initialize a new SmartMerger
       #
       # @param template_content [String] Content of the template dotenv file
@@ -112,20 +114,64 @@ module Dotenv
         ParseError
       end
 
-      # Perform the dotenv-specific merge with custom alignment logic
+      # Perform the dotenv-specific merge with structural-owner alignment.
       #
       # @return [MergeResult] The merge result
       def perform_merge
-        alignment = align_statements
+        template_nodes = @template_analysis.structural_owners
+        dest_nodes = @dest_analysis.structural_owners
 
-        DebugLogger.debug("Alignment complete", {
-          total_entries: alignment.size,
-          matches: alignment.count { |e| e[:type] == :match },
-          template_only: alignment.count { |e| e[:type] == :template_only },
-          dest_only: alignment.count { |e| e[:type] == :dest_only },
-        })
+        emit_root_boundary(:preamble)
 
-        process_alignment(alignment)
+        template_index = build_match_index(template_nodes, @template_analysis)
+        dest_sigs = destination_signature_set(dest_nodes, @dest_analysis)
+        trailing_groups, matched_indices = build_dest_iterate_trailing_groups(
+          template_nodes: template_nodes,
+          dest_sigs: dest_sigs,
+          signature_for: ->(node) { freeze_node?(node) ? nil : @template_analysis.generate_signature(node) },
+          add_template_only_nodes: @add_template_only_nodes,
+        )
+
+        matched_template_indices = Set.new
+        consumed_indices = Set.new
+
+        emit_prefix_trailing_group(trailing_groups, consumed_indices) do |info|
+          add_template_only_node(info[:node], template_nodes.index(info[:node]))
+        end
+
+        dest_nodes.each do |dest_node|
+          if freeze_node?(dest_node)
+            @result.add_freeze_block(dest_node)
+            next
+          end
+
+          match_key = @dest_analysis.generate_signature(dest_node)
+          template_match = find_unmatched(template_index[match_key], matched_template_indices)
+
+          if template_match
+            matched_template_indices << template_match[:index]
+            consumed_indices << template_match[:index]
+            process_match(template_match[:node], dest_node)
+            flush_ready_trailing_groups(
+              trailing_groups: trailing_groups,
+              matched_indices: matched_indices,
+              consumed_indices: consumed_indices,
+            ) do |info|
+              add_template_only_node(info[:node], info[:index])
+            end
+          else
+            process_dest_only(dest_node, dest_nodes.index(dest_node))
+          end
+        end
+
+        emit_remaining_trailing_groups(
+          trailing_groups: trailing_groups,
+          consumed_indices: consumed_indices,
+        ) do |info|
+          add_template_only_node(info[:node], info[:index])
+        end
+
+        emit_root_boundary(:postlude)
 
         # Normalize consecutive blank lines left behind by comment dedup or node removal
         @result.normalize_consecutive_blank_lines!
@@ -135,159 +181,43 @@ module Dotenv
 
       private
 
-      # Align statements between template and destination
-      # @return [Array<Hash>] Alignment entries
-      def align_statements
-        template_stmts = @template_analysis.statements
-        dest_stmts = @dest_analysis.statements
+      def build_match_index(nodes, analysis)
+        index = Hash.new { |h, k| h[k] = [] }
+        nodes.each_with_index do |node, idx|
+          next if freeze_node?(node)
 
-        # Build signature maps (sig → [indices...])
-        _template_sigs = build_signature_map(template_stmts, @template_analysis)
-        dest_sigs = build_signature_map(dest_stmts, @dest_analysis)
-
-        alignment = []
-        matched_dest_indices = Set.new
-
-        # Per-signature cursor for sequential 1:1 matching of duplicates
-        sig_cursor = Hash.new(0)
-
-        # First pass: find matches for template statements
-        template_stmts.each_with_index do |stmt, t_idx|
-          sig = @template_analysis.generate_signature(stmt)
-
-          if sig && dest_sigs.key?(sig)
-            # Find the next unconsumed dest index with this signature
-            dest_indices = dest_sigs[sig]
-            cursor = sig_cursor[sig]
-            d_idx = nil
-
-            while cursor < dest_indices.size
-              candidate = dest_indices[cursor]
-              unless matched_dest_indices.include?(candidate)
-                d_idx = candidate
-                break
-              end
-              cursor += 1
-            end
-
-            if d_idx
-              alignment << {
-                type: :match,
-                template_stmt: stmt,
-                dest_stmt: dest_stmts[d_idx],
-                template_index: t_idx,
-                dest_index: d_idx,
-                signature: sig,
-              }
-              matched_dest_indices << d_idx
-              sig_cursor[sig] = cursor + 1
-            else
-              # All dest copies consumed — template-only duplicate
-              alignment << {
-                type: :template_only,
-                template_stmt: stmt,
-                template_index: t_idx,
-                signature: sig,
-              }
-            end
-          else
-            alignment << {
-              type: :template_only,
-              template_stmt: stmt,
-              template_index: t_idx,
-              signature: sig,
-            }
-          end
+          key = analysis.generate_signature(node)
+          index[key] << {node: node, index: idx}
         end
-
-        # Second pass: add destination-only statements
-        dest_stmts.each_with_index do |stmt, d_idx|
-          next if matched_dest_indices.include?(d_idx)
-
-          alignment << {
-            type: :dest_only,
-            dest_stmt: stmt,
-            dest_index: d_idx,
-            signature: @dest_analysis.generate_signature(stmt),
-          }
-        end
-
-        # Sort by destination order (preserve dest structure), then template order for additions
-        sort_alignment(alignment, dest_stmts.size)
+        index
       end
 
-      # Build a map of signature => [statement indices...]
-      # Stores ALL occurrences so duplicates are matched 1:1 in order.
-      # @param statements [Array] Statements
-      # @param analysis [FileAnalysis] Analysis for signature generation
-      # @return [Hash{Array => Array<Integer>}]
-      def build_signature_map(statements, analysis)
-        map = Hash.new { |h, k| h[k] = [] }
-        statements.each_with_index do |stmt, idx|
-          sig = analysis.generate_signature(stmt)
-          map[sig] << idx if sig
-        end
-        map
-      end
+      def destination_signature_set(nodes, analysis)
+        nodes.each_with_object(Set.new) do |node, signatures|
+          next if freeze_node?(node)
 
-      # Sort alignment entries for output
-      # @param alignment [Array<Hash>] Alignment entries
-      # @param dest_size [Integer] Number of destination statements
-      # @return [Array<Hash>]
-      def sort_alignment(alignment, dest_size)
-        alignment.sort_by do |entry|
-          case entry[:type]
-          when :match
-            # Matches: use destination position
-            [entry[:dest_index], 0]
-          when :dest_only
-            # Destination-only: use destination position
-            [entry[:dest_index], 0]
-          when :template_only
-            # Template-only: add at end, in template order
-            [dest_size + entry[:template_index], 1]
-          end
+          signatures << analysis.generate_signature(node)
         end
       end
 
-      # Process alignment entries and build result
-      # @param alignment [Array<Hash>] Alignment entries
-      # @return [void]
-      def process_alignment(alignment)
-        alignment.each do |entry|
-          case entry[:type]
-          when :match
-            process_match(entry)
-          when :template_only
-            process_template_only(entry)
-          when :dest_only
-            process_dest_only(entry)
-          end
-        end
+      def find_unmatched(entries, matched_indices)
+        return unless entries
+
+        entries.find { |entry| !matched_indices.include?(entry[:index]) }
       end
 
-      # Process a matched entry
-      # @param entry [Hash] Alignment entry
-      # @return [void]
-      def process_match(entry)
-        dest_stmt = entry[:dest_stmt]
+      def trailing_group_node_matched?(node, _signature)
+        freeze_node?(node)
+      end
 
-        # Freeze blocks always win
-        if dest_stmt.is_a?(FreezeNode)
-          @result.add_freeze_block(dest_stmt)
-          return
-        end
-
-        # Resolve preference (handles both Symbol and Hash preferences)
-        resolved_pref = resolve_preference(entry[:template_stmt], entry[:dest_stmt])
+      def process_match(template_stmt, dest_stmt)
+        resolved_pref = resolve_preference(template_stmt, dest_stmt)
 
         case resolved_pref
         when :template
-          emit_template_preferred_match(entry)
-        when :destination
-          @result.add_from_destination(entry[:dest_index], decision: MergeResult::DECISION_DESTINATION)
+          emit_template_preferred_match(template_stmt, dest_stmt)
         else
-          @result.add_from_destination(entry[:dest_index], decision: MergeResult::DECISION_DESTINATION)
+          @result.add_raw(node_lines_for(dest_stmt, @dest_analysis), decision: MergeResult::DECISION_DESTINATION)
         end
       end
 
@@ -332,47 +262,55 @@ module Dotenv
         stmt
       end
 
-      # Process a template-only entry
-      # @param entry [Hash] Alignment entry
-      # @return [void]
-      def process_template_only(entry)
+      def add_template_only_node(stmt, _index)
         return unless @add_template_only_nodes
-
-        # Skip comments and blank lines from template
-        stmt = entry[:template_stmt]
-        return if stmt.is_a?(EnvLine) && (stmt.comment? || stmt.blank?)
-
-        @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_ADDED)
-      end
-
-      # Process a destination-only entry
-      # @param entry [Hash] Alignment entry
-      # @return [void]
-      def process_dest_only(entry)
-        dest_stmt = entry[:dest_stmt]
-
-        if dest_stmt.is_a?(FreezeNode)
-          @result.add_freeze_block(dest_stmt)
-        elsif remove_destination_only_assignment?(dest_stmt)
-          emit_removed_destination_assignment_comments(dest_stmt)
-        else
-          @result.add_from_destination(entry[:dest_index], decision: MergeResult::DECISION_DESTINATION)
-        end
-      end
-
-      def emit_template_preferred_match(entry)
-        template_stmt = entry[:template_stmt]
-        dest_stmt = entry[:dest_stmt]
-
-        unless preserve_destination_inline_comment_for_template_match?(template_stmt, dest_stmt)
-          @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_TEMPLATE)
-          return
-        end
+        return if freeze_node?(stmt)
 
         @result.add_raw(
-          [template_line_with_destination_inline_comment(template_stmt, dest_stmt)],
+          node_lines_for(stmt, @template_analysis, include_leading_segment: false),
+          decision: MergeResult::DECISION_ADDED,
+        )
+      end
+
+      def process_dest_only(dest_stmt, dest_index)
+        if remove_destination_only_assignment?(dest_stmt)
+          lines = removed_destination_comment_lines_for(dest_stmt)
+          @result.add_raw(lines, decision: MergeResult::DECISION_DESTINATION) if lines.any?
+        else
+          @result.add_raw(node_lines_for(dest_stmt, @dest_analysis), decision: MergeResult::DECISION_DESTINATION)
+        end
+      end
+
+      def emit_template_preferred_match(template_stmt, dest_stmt)
+        comment_source_node, comment_source_analysis = preferred_comment_source_for(template_stmt, dest_stmt)
+        inline_comment = preferred_inline_comment_for(template_stmt, dest_stmt)
+        @result.add_raw(
+          node_lines_for(
+            template_stmt,
+            @template_analysis,
+            comment_source_node: comment_source_node,
+            comment_source_analysis: comment_source_analysis,
+            inline_comment: inline_comment,
+          ),
           decision: MergeResult::DECISION_TEMPLATE,
         )
+      end
+
+      def preferred_comment_source_for(template_stmt, dest_stmt)
+        return [dest_stmt, @dest_analysis] if node_has_leading_comments?(dest_stmt, @dest_analysis)
+        return [template_stmt, @template_analysis] if node_has_leading_comments?(template_stmt, @template_analysis)
+
+        [template_stmt, @template_analysis]
+      end
+
+      def node_has_leading_comments?(node, analysis)
+        leading_segment_lines_for(node, analysis).any? { |line| !line.to_s.strip.empty? }
+      end
+
+      def preferred_inline_comment_for(template_stmt, dest_stmt)
+        return unless preserve_destination_inline_comment_for_template_match?(template_stmt, dest_stmt)
+
+        destination_inline_comment_for(dest_stmt)
       end
 
       def preserve_destination_inline_comment_for_template_match?(template_stmt, dest_stmt)
@@ -381,20 +319,6 @@ module Dotenv
         return false unless destination_inline_comment_for(dest_stmt)
 
         template_inline_comment_for(template_stmt).nil?
-      end
-
-      def template_line_with_destination_inline_comment(template_stmt, dest_stmt)
-        inline_comment = destination_inline_comment_for(dest_stmt)
-        return template_stmt.raw unless inline_comment
-
-        "#{template_stmt.raw.rstrip} #{inline_comment[:raw]}"
-      end
-
-      def emit_removed_destination_assignment_comments(dest_stmt)
-        inline_comment = destination_inline_comment_for(dest_stmt)
-        return unless inline_comment
-
-        @result.add_raw([inline_comment[:raw]], decision: MergeResult::DECISION_DESTINATION)
       end
 
       def remove_destination_only_assignment?(stmt)
@@ -407,6 +331,132 @@ module Dotenv
 
       def template_inline_comment_for(stmt)
         @template_analysis.comment_tracker.inline_comment_at(stmt.line_number)
+      end
+
+      def freeze_node?(node)
+        node.is_a?(FreezeNode) || (node.respond_to?(:is_a?) && node.is_a?(Ast::Merge::Freezable))
+      end
+
+      def emit_root_boundary(kind)
+        lines = root_boundary_lines_for(kind, @dest_analysis)
+        return if lines.empty?
+
+        decision = MergeResult::DECISION_DESTINATION
+        @result.add_raw(lines, decision: decision)
+      end
+
+      def root_boundary_lines_for(kind, analysis)
+        owners = Array(analysis.structural_owners).select do |owner|
+          owner.respond_to?(:start_line) && owner.respond_to?(:end_line) && owner.start_line && owner.end_line
+        end
+
+        return analysis.lines.map(&:raw) if kind == :preamble && owners.empty? && analysis.respond_to?(:lines) && analysis.lines.any?
+        return [] if owners.empty?
+
+        case kind
+        when :preamble
+          first_owner = owners.min_by(&:start_line)
+          start_line = emission_start_line_for(first_owner, analysis)
+          return [] unless start_line && start_line > 1
+
+          (1...start_line).filter_map { |line_number| raw_line_at(analysis, line_number) }
+        when :postlude
+          last_line = owners.map(&:end_line).compact.max
+          return [] unless last_line && analysis.respond_to?(:lines)
+          return [] if last_line >= analysis.lines.length
+
+          ((last_line + 1)..analysis.lines.length).filter_map { |line_number| raw_line_at(analysis, line_number) }
+        else
+          []
+        end
+      end
+
+      def emission_start_line_for(node, analysis)
+        attachment = analysis.comment_attachment_for(node)
+        leading_region = attachment&.leading_region
+        start_line = if leading_region&.start_line
+          leading_region.start_line
+        elsif first_structural_owner?(node, analysis) && analysis.comment_augmenter.preamble_region&.start_line
+          analysis.comment_augmenter.preamble_region.start_line
+        else
+          node.start_line
+        end
+
+        while start_line > 1 && raw_line_at(analysis, start_line - 1).to_s.strip.empty?
+          start_line -= 1
+        end
+
+        start_line
+      end
+
+      def first_structural_owner?(node, analysis)
+        Array(analysis.structural_owners).first.equal?(node)
+      end
+
+      def node_lines_for(
+        node,
+        analysis,
+        comment_source_node: node,
+        comment_source_analysis: analysis,
+        inline_comment: nil,
+        include_leading_segment: true
+      )
+        return freeze_block_lines_for(node) if freeze_node?(node)
+
+        leading_lines = include_leading_segment ? leading_segment_lines_for(comment_source_node, comment_source_analysis) : []
+        node_lines = (node.start_line..node.end_line).filter_map { |line_number| raw_line_at(analysis, line_number) }
+        leading_lines + apply_inline_comment(node_lines, inline_comment)
+      end
+
+      def removed_destination_comment_lines_for(node)
+        lines = leading_segment_lines_for(node, @dest_analysis)
+        attachment = @dest_analysis.comment_attachment_for(node)
+
+        if (inline_comment = destination_inline_comment_for(node))
+          lines << promoted_inline_comment_line_for(node, @dest_analysis, inline_comment)
+        end
+
+        if (trailing_region = attachment&.trailing_region)
+          lines.concat(trailing_region.text.split("\n"))
+        end
+
+        trailing_gap = attachment&.trailing_gap
+        if trailing_gap && trailing_gap.effective_controller_side(removed_owners: [node]) == :after
+          lines.concat(trailing_gap.lines)
+        end
+
+        lines.compact
+      end
+
+      def leading_segment_lines_for(node, analysis)
+        start_line = emission_start_line_for(node, analysis)
+        return [] unless start_line && start_line < node.start_line
+
+        (start_line...node.start_line).filter_map { |line_number| raw_line_at(analysis, line_number) }
+      end
+
+      def apply_inline_comment(lines, inline_comment)
+        return lines if inline_comment.nil? || lines.empty?
+
+        updated_lines = lines.dup
+        updated_lines[-1] = "#{updated_lines[-1].rstrip} #{inline_comment[:raw].sub(/\A\s+/, "")}"
+        updated_lines
+      end
+
+      def promoted_inline_comment_line_for(node, analysis, inline_comment)
+        raw_line = raw_line_at(analysis, node.start_line)
+        return unless raw_line
+
+        "#{raw_line[/\A\s*/]}#{inline_comment[:raw].sub(/\A\s+/, "")}"
+      end
+
+      def freeze_block_lines_for(node)
+        node.lines.map { |line| line.respond_to?(:raw) ? line.raw : line.to_s }
+      end
+
+      def raw_line_at(analysis, line_number)
+        line = analysis.line_at(line_number)
+        line.respond_to?(:raw) ? line.raw : line
       end
     end
   end
