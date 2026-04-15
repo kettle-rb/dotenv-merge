@@ -247,6 +247,120 @@ RSpec.describe Dotenv::Merge::SmartMerger do
         expect(result.to_s).to include("API_KEY=template")
         expect(result.to_s).to include("# Footer docs")
       end
+
+      it "preserves a shared interstitial comment block singularly between adjacent matched assignments" do
+        template = <<~DOTENV
+          ALPHA=1
+          # Shared docs
+          BETA=2
+        DOTENV
+        destination = <<~DOTENV
+          ALPHA=9
+          # Shared docs
+          BETA=8
+        DOTENV
+
+        merged = described_class.new(template, destination).merge
+
+        expect(merged.lines.grep("# Shared docs\n").size).to eq(1)
+        expect(merged).to include("ALPHA=9\n# Shared docs\nBETA=8")
+      end
+
+      it "collapses duplicated template-owned preamble prefixes in heal mode" do
+        template = <<~DOTENV
+          # Shared header
+
+          ALPHA=1
+        DOTENV
+        destination = <<~DOTENV
+          # Shared header
+          # Shared header
+          # Destination header
+          ALPHA=9
+        DOTENV
+
+        merged = described_class.new(template, destination, add_template_only_nodes: true).merge
+
+        expect(merged.lines.grep("# Shared header\n").size).to eq(0)
+        expect(merged.lines.grep("# Destination header\n").size).to eq(1)
+        expect(merged).to include("ALPHA=9")
+      end
+
+      it "preserves duplicated template-owned preamble prefixes in skip mode" do
+        template = <<~DOTENV
+          # Shared header
+
+          ALPHA=1
+        DOTENV
+        destination = <<~DOTENV
+          # Shared header
+          # Shared header
+          # Destination header
+          ALPHA=9
+        DOTENV
+
+        merged = described_class.new(
+          template,
+          destination,
+          add_template_only_nodes: true,
+          corruption_handling: :skip,
+        ).merge
+
+        expect(merged.lines.grep("# Shared header\n").size).to eq(2)
+        expect(merged.lines.grep("# Destination header\n").size).to eq(1)
+      end
+
+      it "warns and preserves duplicated template-owned preamble prefixes in warn mode" do
+        allow(Dotenv::Merge::DebugLogger).to receive(:debug_warning)
+
+        template = <<~DOTENV
+          # Shared header
+
+          ALPHA=1
+        DOTENV
+        destination = <<~DOTENV
+          # Shared header
+          # Shared header
+          # Destination header
+          ALPHA=9
+        DOTENV
+
+        merged = described_class.new(
+          template,
+          destination,
+          add_template_only_nodes: true,
+          corruption_handling: :warn,
+        ).merge
+
+        expect(Dotenv::Merge::DebugLogger).to have_received(:debug_warning).with(
+          /Suspected corruption \(duplicate_template_preamble_prefix\)/,
+          hash_including(template_comment_lines: 2, merged_comment_lines: 3, destination_specific_comment_lines: 1),
+        )
+        expect(merged.lines.grep("# Shared header\n").size).to eq(2)
+      end
+
+      it "raises on duplicated template-owned preamble prefixes in error mode" do
+        template = <<~DOTENV
+          # Shared header
+
+          ALPHA=1
+        DOTENV
+        destination = <<~DOTENV
+          # Shared header
+          # Shared header
+          # Destination header
+          ALPHA=9
+        DOTENV
+
+        expect {
+          described_class.new(
+            template,
+            destination,
+            add_template_only_nodes: true,
+            corruption_handling: :error,
+          ).merge
+        }.to raise_error(Dotenv::Merge::CorruptionDetectedError, /duplicate_template_preamble_prefix/)
+      end
     end
 
     context "with a comment-only destination" do

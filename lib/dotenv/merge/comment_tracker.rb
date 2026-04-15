@@ -12,9 +12,11 @@ module Dotenv
     # - full-line comments (`# comment`)
     # - safe inline comments on unquoted assignments (`KEY=value # comment`)
     #
-    # Slice 1 intentionally stays conservative around quoted values. `#` inside
-    # quoted values is not treated as a comment, and quoted assignments with
-    # trailing comment-like text are left for later slices.
+    # This adapter intentionally stays conservative around quoted values. `#`
+    # inside quoted values is not treated as a comment, and quoted assignments
+    # with trailing comment-like text remain literal value content. That is a
+    # deliberate parser boundary for dotenv-merge, not a pending comment-matrix
+    # bug to "fix" later without an explicit product decision.
     class CommentTracker < Ast::Merge::Comment::HashTrackerBase
       def initialize(source_or_lines)
         @line_objects = normalize_line_objects(source_or_lines)

@@ -27,6 +27,8 @@ module Dotenv
     class SmartMerger < ::Ast::Merge::SmartMergerBase
       include Ast::Merge::TrailingGroups::DestIterate
 
+      attr_reader :corruption_handling
+
       # Initialize a new SmartMerger
       #
       # @param template_content [String] Content of the template dotenv file
@@ -37,6 +39,8 @@ module Dotenv
       #   (default: false)
       # @param remove_template_missing_nodes [Boolean] Whether to remove destination-only
       #   env vars that do not exist in the template (default: false)
+      # @param corruption_handling [Symbol] How to handle detected historical
+      #   duplicate-prefix corruption (:heal, :warn, :error, :skip)
       # @param freeze_token [String] Token for freeze block markers
       #   (default: "dotenv-merge")
       # @param match_refiner [#call, nil] Match refiner for fuzzy matching
@@ -52,6 +56,7 @@ module Dotenv
         preference: :destination,
         add_template_only_nodes: false,
         remove_template_missing_nodes: false,
+        corruption_handling: :heal,
         freeze_token: nil,
         match_refiner: nil,
         regions: nil,
@@ -60,6 +65,7 @@ module Dotenv
         **options
       )
         @remove_template_missing_nodes = remove_template_missing_nodes
+        @corruption_handling = ::Ast::Merge::Healer.normalize_mode(corruption_handling)
 
         super(
           template_content,
@@ -173,6 +179,10 @@ module Dotenv
 
         emit_root_boundary(:postlude)
 
+        merged_content = @result.to_s
+        healed_content = collapse_cross_source_preamble_prefixes(merged_content)
+        update_result_content(@result, healed_content) if healed_content != merged_content
+
         @result
       end
 
@@ -263,8 +273,17 @@ module Dotenv
         return unless @add_template_only_nodes
         return if freeze_node?(stmt)
 
+        # Intentional product behavior: template-only dotenv additions do not
+        # import surrounding template comment context. The matrix marks those
+        # comment-bearing template-only cases as out of scope unless this policy
+        # is changed deliberately.
         @result.add_raw(
-          node_lines_for(stmt, @template_analysis, include_leading_segment: false),
+          node_lines_for(
+            stmt,
+            @template_analysis,
+            include_leading_segment: false,
+            include_interstitial_trailing_segment: false,
+          ),
           decision: MergeResult::DECISION_ADDED,
         )
       end
@@ -396,13 +415,15 @@ module Dotenv
         comment_source_node: node,
         comment_source_analysis: analysis,
         inline_comment: nil,
-        include_leading_segment: true
+        include_leading_segment: true,
+        include_interstitial_trailing_segment: true
       )
         return freeze_block_lines_for(node) if freeze_node?(node)
 
         leading_lines = include_leading_segment ? leading_segment_lines_for(comment_source_node, comment_source_analysis) : []
         node_lines = (node.start_line..node.end_line).filter_map { |line_number| raw_line_at(analysis, line_number) }
-        leading_lines + apply_inline_comment(node_lines, inline_comment)
+        trailing_lines = include_interstitial_trailing_segment ? interstitial_trailing_segment_lines_for(node, analysis) : []
+        leading_lines + apply_inline_comment(node_lines, inline_comment) + trailing_lines
       end
 
       def removed_destination_comment_lines_for(node)
@@ -432,6 +453,23 @@ module Dotenv
         (start_line...node.start_line).filter_map { |line_number| raw_line_at(analysis, line_number) }
       end
 
+      def interstitial_trailing_segment_lines_for(node, analysis)
+        return [] unless next_structural_owner_for(node, analysis)
+
+        trailing_region = analysis.comment_attachment_for(node)&.trailing_region
+        return [] unless trailing_region
+
+        trailing_region.text.split("\n")
+      end
+
+      def next_structural_owner_for(node, analysis)
+        owners = Array(analysis.structural_owners)
+        index = owners.index(node)
+        return unless index
+
+        owners[index + 1]
+      end
+
       def apply_inline_comment(lines, inline_comment)
         return lines if inline_comment.nil? || lines.empty?
 
@@ -449,6 +487,71 @@ module Dotenv
 
       def freeze_block_lines_for(node)
         node.lines.map { |line| line.respond_to?(:raw) ? line.raw : line.to_s }
+      end
+
+      STANDALONE_DOTENV_COMMENT_LINE_RE = /\A\s*#.*\z/
+      private_constant :STANDALONE_DOTENV_COMMENT_LINE_RE
+
+      def collapse_cross_source_preamble_prefixes(content)
+        template_comments, = leading_standalone_comment_run(@template_content.to_s)
+        return content if template_comments.empty?
+
+        merged_comments, remainder = leading_standalone_comment_run(content)
+        return content if merged_comments.empty?
+
+        template_tally = template_comments.tally
+        merged_tally = merged_comments.tally
+        duplicated_template_prefix = template_tally.any? do |line, count|
+          merged_tally.fetch(line, 0) > count
+        end
+        return content unless duplicated_template_prefix
+
+        destination_specific_comments = merged_comments.reject { |line| template_comments.include?(line) }
+        return content if destination_specific_comments.empty?
+
+        should_heal = ::Ast::Merge::Healer.handle(
+          mode: @corruption_handling,
+          kind: :duplicate_template_preamble_prefix,
+          message: "merged dotenv preamble begins with duplicated template-owned comment lines",
+          prefix: "[dotenv-merge]",
+          error_class: Dotenv::Merge::CorruptionDetectedError,
+          warner: lambda { |formatted|
+            DebugLogger.debug_warning(formatted, {
+              template_comment_lines: template_comments.length,
+              merged_comment_lines: merged_comments.length,
+              destination_specific_comment_lines: destination_specific_comments.length,
+            })
+          },
+        )
+        return content unless should_heal
+
+        remainder = remainder.sub(/\A(?:\s*\n)+/, "")
+        rebuilt = destination_specific_comments.join("\n")
+        return rebuilt if remainder.empty?
+
+        "#{rebuilt}\n\n#{remainder}"
+      end
+
+      def leading_standalone_comment_run(text)
+        lines = text.to_s.split("\n", -1)
+        comment_lines = []
+        index = 0
+
+        while index < lines.length
+          line = lines[index]
+          if line.strip.empty?
+            comment_lines << line if comment_lines.any?
+            index += 1
+            next
+          end
+
+          break unless STANDALONE_DOTENV_COMMENT_LINE_RE.match?(line)
+
+          comment_lines << line
+          index += 1
+        end
+
+        [comment_lines, lines.drop(index).join("\n")]
       end
 
       def raw_line_at(analysis, line_number)

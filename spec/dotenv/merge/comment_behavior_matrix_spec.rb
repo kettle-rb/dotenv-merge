@@ -16,11 +16,11 @@ RSpec.describe Dotenv::Merge::SmartMerger, "comment behavior matrix" do
         inline ? "#{line} # #{inline}" : line
       end,
       capabilities: {
-        quoted_hash_inline_literals: "quoted values with trailing inline comments are not parsed natively",
-        template_only_attached_comment_additions: "template-only additions intentionally stay comment-free",
-        template_only_floating_comment_additions: "template-only additions intentionally stay comment-free",
-        template_only_preamble_additions: "template-only additions intentionally stay comment-free",
-        template_only_trailing_comment_additions: "template-only additions intentionally stay comment-free",
+        quoted_hash_inline_literals: "intentional parser limit: quoted dotenv values with trailing comment-like text are treated as literal value content, so this is not a pending matrix gap",
+        template_only_attached_comment_additions: "intentional merge policy: template-only dotenv additions stay comment-free, so this matrix case is out of scope unless that product decision changes",
+        template_only_floating_comment_additions: "intentional merge policy: template-only dotenv additions stay comment-free, so this matrix case is out of scope unless that product decision changes",
+        template_only_preamble_additions: "intentional merge policy: template-only dotenv additions stay comment-free, so this matrix case is out of scope unless that product decision changes",
+        template_only_trailing_comment_additions: "intentional merge policy: template-only dotenv additions stay comment-free, so this matrix case is out of scope unless that product decision changes",
       },
       expected_literal_hash_value: "literal # hash",
     )

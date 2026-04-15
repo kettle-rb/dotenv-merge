@@ -59,6 +59,9 @@ module Dotenv
     #   end
     class DestinationParseError < ParseError; end
 
+    # Raised when merge-time corruption detection is configured to error.
+    class CorruptionDetectedError < Error; end
+
     autoload :DebugLogger, "dotenv/merge/debug_logger"
     autoload :CommentTracker, "dotenv/merge/comment_tracker"
     autoload :EnvLine, "dotenv/merge/env_line"
