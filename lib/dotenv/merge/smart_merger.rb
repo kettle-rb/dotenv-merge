@@ -173,9 +173,6 @@ module Dotenv
 
         emit_root_boundary(:postlude)
 
-        # Normalize consecutive blank lines left behind by comment dedup or node removal
-        @result.normalize_consecutive_blank_lines!
-
         @result
       end
 
