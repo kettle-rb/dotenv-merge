@@ -147,6 +147,18 @@ module Dotenv
         :tracker_layout_merge
       end
 
+      def ruleset_owner_selector
+        :assignment_lines_plus_freeze_blocks
+      end
+
+      def ruleset_match_key
+        :env_key
+      end
+
+      def ruleset_render_family
+        :dotenv_assignments
+      end
+
       # Get assignment lines (not in freeze blocks)
       # @return [Array<EnvLine>]
       def assignment_lines

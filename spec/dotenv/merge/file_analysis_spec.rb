@@ -1,6 +1,40 @@
 # frozen_string_literal: true
 
 RSpec.describe Dotenv::Merge::FileAnalysis do
+  it_behaves_like "Ast::Merge::FileAnalyzable" do
+    let(:file_analysis_class) { described_class }
+    let(:freeze_node_class) { Dotenv::Merge::FreezeNode }
+    let(:sample_source) { "API_KEY=secret\n" }
+    let(:sample_source_with_freeze) do
+      <<~DOTENV
+        API_KEY=secret
+        # dotenv-merge:freeze
+        LOCKED=value
+        # dotenv-merge:unfreeze
+        DEBUG=true
+      DOTENV
+    end
+    let(:build_file_analysis) do
+      ->(source, **opts) { described_class.new(source, **opts) }
+    end
+
+    let(:analysis_expected_feature_profile) do
+      {
+        owner_selector: :assignment_lines_plus_freeze_blocks,
+        match_key: :env_key,
+        read_strategy: :source_augmented_portable_write,
+        attachment_strategy: :tracker_layout_merge,
+        comment_style: :hash_comment,
+        render_family: :dotenv_assignments,
+        capabilities: {layout_aware: true, logical_owner: false},
+        logical_owners: {},
+        repair_policies: [],
+        surfaces: [],
+        delegation_policies: [],
+      }
+    end
+  end
+
   describe "#initialize" do
     context "with simple dotenv file" do
       let(:source) do
